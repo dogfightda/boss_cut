@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게임 보스 리젠 타이머</title>
+    <!-- Firebase SDK 추가 -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 8px;
+            color: #333;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 10px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+            padding: 12px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            color: white;
+            position: relative;
+        }
+
+        .login-status {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+        }
+
+        .login-form {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .login-form h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .login-inputs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .login-inputs input {
+            padding: 8px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            min-width: 150px;
+        }
+
+        .admin-only {
+            display: none !important;
+        }
+
+        .admin-logged-in .admin-only {
+            display: block !important;
+        }
+
+        .admin-logged-in .delete-btn {
+            display: inline-block !important;
+        }
+
+        .delete-btn {
+            display: none !important;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .logout-btn, .login-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover, .login-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .control-panel {
+            margin-bottom: 12px;
+        }
+
+        .add-boss-form {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+
+        .add-boss-form h3 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 180px 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 2px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.8rem;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-kill {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        .boss-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .boss-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 8px 12px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 45px;
+        }
+
+        .boss-card.alive {
+            border-color: #27ae60;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
+        }
+
+        .boss-card.dead {
+            border-color: #e74c3c;
+            background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+        }
+
+        .boss-card.respawn-soon {
+            border-color: #f39c12;
+            background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.3); }
+            50% { box-shadow: 0 0 0 3px rgba(243, 156, 18, 0); }
+        }
+
+        .boss-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .boss-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 100px;
+        }
+
+        .boss-status {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .status-alive {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-dead {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .status-soon {
+            background: #f39c12;
+            color: white;
+        }
+
+        .boss-details {
+            display: flex;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: #7f8c8d;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .boss-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .timer-display {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2c3e50;
+            color: white;
+            font-family: 'Courier New', monospace;
+            min-width: 70px;
+            white-space: nowrap;
+        }
+
+        .timer-display.respawn-soon {
+            background: #f39c12;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+
+        .boss-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+        }
+
+        .notification {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            background: #27ae60;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .boss-card {
+                flex-direction: column;
+                gap: 4px;
+                text-align: left;
+                min-height: auto;
+                padding: 6px 8px;
+            }
+            .boss-left {
+                flex-direction: row;
+                gap: 6px;
+                width: 100%;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .boss-name {
+                font-size: 0.9rem;
+                min-width: 80px;
+                flex: 0 0 auto;
+            }
+            .boss-status {
+                font-size: 0.55rem;
+                padding: 1px 4px;
+            }
+            .boss-details {
+                justify-content: flex-start;
+                gap: 6px;
+                font-size: 0.7rem;
+                flex: 1;
+            }
+            .boss-right {
+                flex-direction: row;
+                gap: 6px;
+                width: 100%;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .timer-display {
+                font-size: 0.8rem;
+                padding: 3px 6px;
+                min-width: 60px;
+            }
+            .boss-actions {
+                gap: 3px;
+            }
+            .btn-small {
+                padding: 3px 6px;
+                font-size: 0.65rem;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .modal-body {
+            text-align: center;
+        }
+
+        .modal-body p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .modal-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .modal-inputs input {
+            padding: 12px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .modal-inputs input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="login-status" id="loginStatus">
+                <!-- 로그인 상태 표시 영역 -->
+            </div>
+            <h1>⚔️ 게임 보스 리젠 타이머</h1>
+            <p>보스 몬스터의 리젠 시간을 추적하고 관리하세요</p>
+        </div>
+
+        <!-- 로그인 모달 -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔐 관리자 로그인</h3>
+                    <button class="close-btn" onclick="closeLoginModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>보스 추가/삭제를 위해 관리자 로그인이 필요합니다</p>
+                    <div class="modal-inputs">
+                        <input type="email" id="modalLoginEmail" placeholder="이메일" required>
+                        <input type="password" id="modalLoginPassword" placeholder="비밀번호" required>
+                    </div>
+                    <button type="button" class="modal-btn" onclick="login()">로그인</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 보스 수정 모달 -->
+        <div id="editBossModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>✏️ 보스 정보 수정</h3>
+                    <button class="close-btn" onclick="closeEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-inputs">
+                        <input type="text" id="editBossName" placeholder="보스 이름" required>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="editRespawnHours" placeholder="0" min="0" max="23" style="text-align: center; flex: 1;">
+                            <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
+                            <input type="number" id="editRespawnMinutes" placeholder="0" min="0" max="59" style="text-align: center; flex: 1;">
+                        </div>
+                        <small style="color: #7f8c8d; font-size: 0.8rem; display: block; margin-top: -8px;">리젠 시간 (시:분)</small>
+                        <input type="text" id="editBossLocation" placeholder="위치">
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="modal-btn" onclick="saveEditBoss()" style="flex: 1;">저장</button>
+                        <button type="button" class="modal-btn" onclick="closeEditModal()" style="flex: 1; background: #6c757d;">취소</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalBosses">0</div>
+                <div class="stat-label">총 보스 수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="aliveBosses">0</div>
+                <div class="stat-label">생존 보스</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="deadBosses">0</div>
+                <div class="stat-label">사망 보스</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="respawnSoon">0</div>
+                <div class="stat-label">곧 리젠</div>
+            </div>
+        </div>
+
+        <div class="control-panel admin-only">
+            <div class="add-boss-form">
+                <h3 style="margin-bottom: 8px; color: #2c3e50;">새 보스 추가</h3>
+                <form id="bossForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bossName">보스 이름</label>
+                            <input type="text" id="bossName" placeholder="예: 드래곤 킹" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="respawnTime">리젠 시간</label>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <input type="number" id="respawnHours" placeholder="0" min="0" max="23" value="0" style="text-align: center; flex: 1;">
+                                <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
+                                <input type="number" id="respawnMinutes" placeholder="0" min="0" max="59" value="0" style="text-align: center; flex: 1;">
+                            </div>
+                            <small style="color: #7f8c8d; font-size: 0.7rem;">시:분 (예: 1:30)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="bossLocation">위치</label>
+                            <input type="text" id="bossLocation" placeholder="예: 화산 던전 3층">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="submit" class="btn" style="flex: 1;">보스 추가</button>
+                        <button type="button" class="btn" onclick="reviveAllBosses()" style="flex: 1; background: linear-gradient(45deg, #27ae60, #2ecc71);">🔄 전체 리젠</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="bossContainer">
+            <div class="empty-state">
+                <h3>등록된 보스가 없습니다</h3>
+                <p>위의 양식을 사용해서 첫 번째 보스를 추가해보세요!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAY6Ff6uZ-iZ7soeuXBU0mtTKKZZ8gAPck",
+            authDomain: "bossraidtracker.firebaseapp.com",
+            databaseURL: "https://bossraidtracker-default-rtdb.firebaseio.com",
+            projectId: "bossraidtracker",
+            storageBucket: "bossraidtracker.appspot.com",
+            messagingSenderId: "975753692062",
+            appId: "1:975753692062:web:0991fb5bcbc52a9d3d0c8f",
+            measurementId: "G-MC8YY38ZP3"
+        };
+
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const bossTimersRef = db.ref('bossTimers');
+
+        let bosses = [];
+        let timers = {};
+        let isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+        let currentEditingBoss = null;
+
+        const ADMIN_EMAIL = 'dogfightda@gmail.com';
+        const ADMIN_PASSWORD = '0716';
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLoginStatus();
+            loadBossesFromFirebase();
+            startTimers();
+        });
+
+        // Firebase에서 보스 데이터 로드
+        function loadBossesFromFirebase() {
+            bossTimersRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    bosses = Object.keys(data).map(key => ({
+                        ...data[key],
+                        id: parseInt(key)
+                    }));
+                } else {
+                    bosses = [];
+                }
+                renderBosses();
+                updateStats();
+            });
+        }
+
+        // 로그인 모달 관련 함수들
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'block';
+            document.getElementById('modalLoginEmail').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('modalLoginEmail').value = '';
+            document.getElementById('modalLoginPassword').value = '';
+        }
+
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const loginModal = document.getElementById('loginModal');
+            const editModal = document.getElementById('editBossModal');
+            if (event.target === loginModal) {
+                closeLoginModal();
+            } else if (event.target === editModal) {
+                closeEditModal();
+            }
+        }
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeLoginModal();
+                closeEditModal();
+            }
+        });
+
+        // 모달에서 Enter 키로 로그인/저장
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const loginModal = document.getElementById('loginModal');
+                const editModal = document.getElementById('editBossModal');
+                if (loginModal.style.display === 'block') {
+                    login();
+                } else if (editModal.style.display === 'block') {
+                    saveEditBoss();
+                }
+            }
+        });
+
+        // 로그인 함수
+        function login() {
+            const email = document.getElementById('modalLoginEmail').value;
+            const password = document.getElementById('modalLoginPassword').value;
+
+            if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                isLoggedIn = true;
+                localStorage.setItem('adminLoggedIn', 'true');
+                updateLoginStatus();
+                closeLoginModal();
+                showNotification('관리자로 로그인되었습니다!');
+            } else {
+                showNotification('이메일 또는 비밀번호가 잘못되었습니다.');
+            }
+        }
+
+        // 로그아웃 함수
+        function logout() {
+            isLoggedIn = false;
+            localStorage.removeItem('adminLoggedIn');
+            updateLoginStatus();
+            showNotification('로그아웃되었습니다.');
+        }
+
+        // 로그인 상태 업데이트
+        function updateLoginStatus() {
+            const loginStatus = document.getElementById('loginStatus');
+            const container = document.querySelector('.container');
+
+            if (isLoggedIn) {
+                loginStatus.innerHTML = `
+                    <div class="user-info">👤 관리자</div>
+                    <button class="logout-btn" onclick="logout()">로그아웃</button>
+                `;
+                container.classList.add('admin-logged-in');
+            } else {
+                loginStatus.innerHTML = `
+                    <div class="user-info">👁️ 게스트 모드</div>
+                    <button class="login-btn" onclick="showLoginModal()">관리자</button>
+                `;
+                container.classList.remove('admin-logged-in');
+            }
+        }
+
+        // 보스 추가 폼
+        document.getElementById('bossForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const hours = parseInt(document.getElementById('respawnHours').value) || 0;
+            const minutes = parseInt(document.getElementById('respawnMinutes').value) || 0;
+            const totalMinutes = hours * 60 + minutes;
+            
+            if (totalMinutes === 0) {
+                showNotification('리젠 시간을 입력해주세요.');
+                return;
+            }
+            
+            const bossData = {
+                id: Date.now(),
+                name: document.getElementById('bossName').value,
+                respawnTime: totalMinutes,
+                location: document.getElementById('bossLocation').value || '미설정',
+                status: 'alive',
+                lastKilled: null,
+                nextRespawn: null,
+                createdAt: new Date().toLocaleString()
+            };
+
+            // Firebase에 보스 데이터 저장
+            bossTimersRef.child(bossData.id.toString()).set(bossData)
+                .then(() => {
+                    document.getElementById('bossForm').reset();
+                    document.getElementById('respawnHours').value = '0';
+                    document.getElementById('respawnMinutes').value = '0';
+                    showNotification(`${bossData.name} 보스가 추가되었습니다!`);
+                })
+                .catch((error) => {
+                    console.error('보스 추가 실패:', error);
+                    showNotification('보스 추가에 실패했습니다.');
+                });
+        });
+
+        // 보스 렌더링
+        function renderBosses() {
+            const container = document.getElementById('bossContainer');
+            
+            if (bosses.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>등록된 보스가 없습니다</h3><p>위의 양식을 사용해서 첫 번째 보스를 추가해보세요!</p></div>';
+                return;
+            }
+            
+            // 보스 정렬
+            const sortedBosses = [...bosses].sort((a, b) => {
+                const now = new Date();
+                
+                // 보스 a의 남은 시간 계산
+                let timeA = 0;
+                if (a.status === 'dead' && a.nextRespawn) {
+                    timeA = new Date(a.nextRespawn) - now;
+                    if (timeA <= 0) timeA = 0; // 이미 리젠된 경우
+                } else if (a.status === 'alive') {
+                    timeA = Infinity; // 대기중인 보스는 가장 나중에
+                }
+                
+                // 보스 b의 남은 시간 계산
+                let timeB = 0;
+                if (b.status === 'dead' && b.nextRespawn) {
+                    timeB = new Date(b.nextRespawn) - now;
+                    if (timeB <= 0) timeB = 0; // 이미 리젠된 경우
+                } else if (b.status === 'alive') {
+                    timeB = Infinity; // 대기중인 보스는 가장 나중에
+                }
+                
+                // 둘 다 대기중인 경우 이름순으로 정렬
+                if (timeA === Infinity && timeB === Infinity) {
+                    return a.name.localeCompare(b.name, 'ko');
+                }
+                
+                // 대기중인 보스가 최상단에 오도록
+                if (timeA === Infinity) return -1;
+                if (timeB === Infinity) return 1;
+                
+                // 남은 시간이 적은 순서대로 정렬
+                return timeA - timeB;
+            });
+            
+            container.innerHTML = `
+                <div class="boss-grid">
+                    ${sortedBosses.map(boss => createBossCard(boss)).join('')}
+                </div>
+            `;
+        }
+
+        // 보스 카드 생성
+        function createBossCard(boss) {
+            const now = new Date();
+            let statusClass = 'alive';
+            let statusText = '생존';
+            let timerDisplay = '대기 중';
+            
+            // 리젠 시간을 시간:분 형태로 표시
+            const respawnHours = Math.floor(boss.respawnTime / 60);
+            const respawnMins = boss.respawnTime % 60;
+            const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
+            
+            if (boss.status === 'dead' && boss.nextRespawn) {
+                const respawnTime = new Date(boss.nextRespawn);
+                const timeDiff = respawnTime - now;
+                
+                if (timeDiff <= 0) {
+                    // 자동 리젠 처리
+                    const updatedBoss = {
+                        ...boss,
+                        status: 'alive',
+                        lastKilled: null,
+                        nextRespawn: null
+                    };
+                    bossTimersRef.child(boss.id.toString()).update(updatedBoss);
+                    statusClass = 'alive';
+                    statusText = '생존';
+                    timerDisplay = '리젠 완료!';
+                } else {
+                    statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead'; // 10분 전부터 곧 리젠
+                    statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
+                    timerDisplay = formatTime(timeDiff);
+                }
+            }
+
+            return `
+                <div class="boss-card ${statusClass}">
+                    <div class="boss-left">
+                        <div class="boss-status status-${statusClass === 'respawn-soon' ? 'soon' : statusClass}">
+                            ${statusText}
+                        </div>
+                        <div class="boss-name">${boss.name}</div>
+                        <div class="boss-details">
+                            <span>📍 ${boss.location}</span>
+                            <span>⏱️ ${respawnTimeText}</span>
+                            ${boss.lastKilled ? `<span>🗡️ ${new Date(boss.lastKilled).toLocaleTimeString()}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="boss-right">
+                        <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''}" id="timer-${boss.id}">
+                            ${timerDisplay}
+                        </div>
+                        <div class="boss-actions">
+                            ${boss.status === 'alive' ? 
+                                `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>` :
+                                `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>`
+                            }
+                            <button class="btn btn-small admin-only" onclick="showEditModal(${boss.id})" style="background: #6c757d;">수정</button>
+                            <button class="btn btn-small delete-btn" onclick="deleteBoss(${boss.id})">삭제</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 보스 처치
+        function killBoss(id) {
+            const boss = bosses.find(b => b.id === id);
+            if (!boss) return;
+            
+            const now = new Date();
+            const updatedBoss = {
+                ...boss,
+                status: 'dead',
+                lastKilled: now.toISOString(),
+                nextRespawn: new Date(now.getTime() + boss.respawnTime * 60000).toISOString()
+            };
+            
+            const respawnHours = Math.floor(boss.respawnTime / 60);
+            const respawnMins = boss.respawnTime % 60;
+            const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
+            
+            bossTimersRef.child(id.toString()).update(updatedBoss)
+                .then(() => {
+                    showNotification(`${boss.name}을(를) 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
+                })
+                .catch((error) => {
+                    console.error('보스 처치 업데이트 실패:', error);
+                    showNotification('업데이트에 실패했습니다.');
+                });
+        }
+
+        // 보스 수동 리젠
+        function reviveBoss(id) {
+            const boss = bosses.find(b => b.id === id);
+            if (!boss) return;
+            
+            const updatedBoss = {
+                ...boss,
+                status: 'alive',
+                lastKilled: null,
+                nextRespawn: null
+            };
+            
+            bossTimersRef.child(id.toString()).update(updatedBoss)
+                .then(() => {
+                    showNotification(`${boss.name}이(가) 리젠되었습니다!`);
+                })
+                .catch((error) => {
+                    console.error('보스 리젠 업데이트 실패:', error);
+                    showNotification('업데이트에 실패했습니다.');
+                });
+        }
+
+        // 보스 삭제
+        function deleteBoss(id) {
+            if (!isLoggedIn) {
+                showNotification('관리자만 삭제할 수 있습니다.');
+                return;
+            }
+            
+            if (confirm('정말로 이 보스를 삭제하시겠습니까?')) {
+                bossTimersRef.child(id.toString()).remove()
+                    .then(() => {
+                        showNotification('보스가 삭제되었습니다.');
+                    })
+                    .catch((error) => {
+                        console.error('보스 삭제 실패:', error);
+                        showNotification('삭제에 실패했습니다.');
+                    });
+            }
+        }
+
+        // 시간 형식화
+        function formatTime(milliseconds) {
+            const totalSeconds = Math.floor(milliseconds / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // 타이머 시작
+        function startTimers() {
+            setInterval(() => {
+                renderBosses();
+                updateStats();
+            }, 1000);
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            const total = bosses.length;
+            const alive = bosses.filter(b => b.status === 'alive').length;
+            const dead = bosses.filter(b => b.status === 'dead').length;
+            const respawnSoon = bosses.filter(b => {
+                if (b.status === 'dead' && b.nextRespawn) {
+                    const timeDiff = new Date(b.nextRespawn) - new Date();
+                    return timeDiff > 0 && timeDiff <= 600000; // 10분 이내
+                }
+                return false;
+            }).length;
+            
+            document.getElementById('totalBosses').textContent = total;
+            document.getElementById('aliveBosses').textContent = alive;
+            document.getElementById('deadBosses').textContent = dead;
+            document.getElementById('respawnSoon').textContent = respawnSoon;
+        }
+        
+        // 알림 표시
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+
+        // 보스 수정 모달 관련 함수들
+        function showEditModal(bossId) {
+            const boss = bosses.find(b => b.id === bossId);
+            if (!boss) return;
+            
+            currentEditingBoss = boss;
+            
+            // 모달에 현재 보스 정보 채우기
+            document.getElementById('editBossName').value = boss.name;
+            document.getElementById('editRespawnHours').value = Math.floor(boss.respawnTime / 60);
+            document.getElementById('editRespawnMinutes').value = boss.respawnTime % 60;
+            document.getElementById('editBossLocation').value = boss.location;
+            
+            document.getElementById('editBossModal').style.display = 'block';
+            document.getElementById('editBossName').focus();
+        }
+
+        function closeEditModal() {
+            document.getElementById('editBossModal').style.display = 'none';
+            currentEditingBoss = null;
+            // 입력 필드 초기화
+            document.getElementById('editBossName').value = '';
+            document.getElementById('editRespawnHours').value = '';
+            document.getElementById('editRespawnMinutes').value = '';
+            document.getElementById('editBossLocation').value = '';
+        }
+
+        function saveEditBoss() {
+            if (!currentEditingBoss) return;
+            
+            const hours = parseInt(document.getElementById('editRespawnHours').value) || 0;
+            const minutes = parseInt(document.getElementById('editRespawnMinutes').value) || 0;
+            const totalMinutes = hours * 60 + minutes;
+            
+            if (totalMinutes === 0) {
+                showNotification('리젠 시간을 입력해주세요.');
+                return;
+            }
+            
+            const updatedBoss = {
+                ...currentEditingBoss,
+                name: document.getElementById('editBossName').value.trim(),
+                respawnTime: totalMinutes,
+                location: document.getElementById('editBossLocation').value.trim() || '미설정'
+            };
+            
+            if (!updatedBoss.name) {
+                showNotification('보스 이름을 입력해주세요.');
+                return;
+            }
+            
+            // Firebase에 업데이트
+            bossTimersRef.child(currentEditingBoss.id.toString()).update(updatedBoss)
+                .then(() => {
+                    closeEditModal();
+                    showNotification(`${updatedBoss.name} 정보가 수정되었습니다!`);
+                })
+                .catch((error) => {
+                    console.error('보스 수정 실패:', error);
+                    showNotification('수정에 실패했습니다.');
+                });
+        }
+
+        // 전체 보스 리젠
+        function reviveAllBosses() {
+            if (!isLoggedIn) {
+                showNotification('관리자만 전체 리젠할 수 있습니다.');
+                return;
+            }
+            
+            const deadBosses = bosses.filter(boss => boss.status === 'dead');
+            
+            if (deadBosses.length === 0) {
+                showNotification('리젠할 보스가 없습니다.');
+                return;
+            }
+            
+            if (confirm(`${deadBosses.length}마리의 보스를 모두 리젠하시겠습니까?\n(서버 점검 후 사용)`)) {
+                // Firebase 배치 업데이트를 위한 객체 준비
+                const updates = {};
+                
+                deadBosses.forEach(boss => {
+                    updates[`${boss.id}/status`] = 'alive';
+                    updates[`${boss.id}/lastKilled`] = null;
+                    updates[`${boss.id}/nextRespawn`] = null;
+                });
+                
+                // 배치 업데이트 실행
+                bossTimersRef.update(updates)
+                    .then(() => {
+                        showNotification(`${deadBosses.length}마리의 보스가 모두 리젠되었습니다!`);
+                    })
+                    .catch((error) => {
+                        console.error('전체 리젠 실패:', error);
+                        showNotification('전체 리젠에 실패했습니다.');
+                    });
+            }
+        }
+    </script>
+</body>
+</html> 
