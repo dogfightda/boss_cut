@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머</title>
+    <title>게임 보스 리젠 타이머 Ver1.0</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -352,6 +352,11 @@
             animation: blink 1s infinite;
         }
 
+        .timer-display.unregistered {
+            background: #e67e22;
+            color: white;
+        }
+
         @keyframes blink {
             50% { opacity: 0.5; }
         }
@@ -395,6 +400,11 @@
             .form-row {
                 grid-template-columns: 1fr;
                 gap: 6px;
+                flex-wrap: wrap !important;
+            }
+            .add-boss-form .form-row .form-group {
+                min-width: 100% !important;
+                flex: 1 1 100%;
             }
             .stats {
                 grid-template-columns: repeat(2, 1fr);
@@ -450,6 +460,33 @@
             .header h1 {
                 font-size: 1.4rem;
             }
+            /* 고정보스 등록폼 시/분 입력란 한 줄 배치 */
+            #fixedBossForm .form-row,
+            #bossForm .boss-form-row {
+                flex-wrap: wrap;
+                display: flex;
+                gap: 8px;
+                align-items: flex-end;
+            }
+            #fixedBossForm .form-row .form-group-hour-minute {
+                display: flex;
+                flex-direction: row;
+                gap: 6px;
+                min-width: 120px;
+                flex: 0 0 auto;
+                align-items: flex-end;
+            }
+            #fixedBossForm .form-row .form-group-hour-minute label {
+                margin-bottom: 0;
+            }
+            #bossForm .boss-form-row .form-group {
+                min-width: 120px;
+                flex: 1 1 120px;
+            }
+            #bossForm .boss-form-row button {
+                min-width: 100px;
+                margin-top: 20px;
+            }
         }
 
         /* 모달 스타일 */
@@ -475,7 +512,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             position: relative;
             animation: modalSlideIn 0.3s ease;
-        }
+            }
 
         @keyframes modalSlideIn {
             from {
@@ -571,6 +608,65 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
+
+        /* 스타일 강조 추가 */
+        .stat-card.selected {
+            background: linear-gradient(90deg, #667eea 60%, #764ba2 100%);
+            color: #fff;
+            border: 2.5px solid #3b4cca;
+            box-shadow: 0 0 16px #667eea66, 0 2px 12px #764ba244;
+            transform: scale(1.07);
+            z-index: 2;
+            transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+        }
+        .stat-card.selected .stat-number, .stat-card.selected .stat-label {
+            color: #fff;
+            text-shadow: 0 2px 8px #3b4cca55;
+        }
+
+        .weekday-selector {
+            display: flex;
+            gap: 8px;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+
+        .weekday-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .weekday-checkbox input[type="checkbox"] {
+            width: auto;
+        }
+
+        .weekday-checkbox label {
+            font-size: 0.85rem;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .fixed-boss-options {
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .fixed-time-inputs {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .fixed-time-inputs input {
+            width: 60px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -579,7 +675,10 @@
             <div class="login-status" id="loginStatus">
                 <!-- 로그인 상태 표시 영역 -->
             </div>
-            <h1>⚔️ 게임 보스 리젠 타이머</h1>
+            <div style="position: absolute; top: 8px; left: 12px;">
+                <button id="soundToggle" onclick="toggleSound()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px; border-radius: 4px; background: rgba(255,255,255,0.2); transition: all 0.2s;" title="사운드 켜기/끄기">🔊</button>
+            </div>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.0</h1>
             <p>보스 몬스터의 리젠 시간을 추적하고 관리하세요</p>
         </div>
 
@@ -587,7 +686,7 @@
         <div id="loginModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>🔐 관리자 로그인</h3>
+            <h3>🔐 관리자 로그인</h3>
                     <button class="close-btn" onclick="closeLoginModal()">&times;</button>
                 </div>
                 <div class="modal-body">
@@ -604,43 +703,86 @@
         <!-- 보스 수정 모달 -->
         <div id="editBossModal" class="modal">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h3>✏️ 보스 정보 수정</h3>
-                    <button class="close-btn" onclick="closeEditModal()">&times;</button>
+                <h2>보스 정보 수정</h2>
+                <div class="form-group">
+                    <label for="editBossName">보스 이름</label>
+                    <input type="text" id="editBossName" placeholder="보스 이름">
                 </div>
-                <div class="modal-body">
-                    <div class="modal-inputs">
-                        <input type="text" id="editBossName" placeholder="보스 이름" required>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="number" id="editRespawnHours" placeholder="0" min="0" max="23" style="text-align: center; flex: 1;">
-                            <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
-                            <input type="number" id="editRespawnMinutes" placeholder="0" min="0" max="59" style="text-align: center; flex: 1;">
+                <div class="form-group">
+                    <label for="editBossLocation">위치</label>
+                    <input type="text" id="editBossLocation" placeholder="위치">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="editIsFixedBoss"> 고정 보스
+                    </label>
+                </div>
+
+                <div id="editFixedBossOptions" class="fixed-boss-options" style="display: none;">
+                    <div class="weekday-selector">
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay0"><label for="editDay0">일</label>
                         </div>
-                        <small style="color: #7f8c8d; font-size: 0.8rem; display: block; margin-top: -8px;">리젠 시간 (시:분)</small>
-                        <input type="text" id="editBossLocation" placeholder="위치">
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay1"><label for="editDay1">월</label>
+                        </div>
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay2"><label for="editDay2">화</label>
+                        </div>
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay3"><label for="editDay3">수</label>
+                        </div>
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay4"><label for="editDay4">목</label>
+                        </div>
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay5"><label for="editDay5">금</label>
+                        </div>
+                        <div class="weekday-checkbox">
+                            <input type="checkbox" id="editDay6"><label for="editDay6">토</label>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" class="modal-btn" onclick="saveEditBoss()" style="flex: 1;">저장</button>
-                        <button type="button" class="modal-btn" onclick="closeEditModal()" style="flex: 1; background: #6c757d;">취소</button>
+                    <div class="fixed-time-inputs">
+                        <input type="number" id="editFixedHour" min="0" max="23" placeholder="시">
+                        <span>:</span>
+                        <input type="number" id="editFixedMinute" min="0" max="59" placeholder="분">
                     </div>
+                </div>
+
+                <div id="editNormalBossOptions">
+                    <div class="form-group">
+                        <label>리젠 시간</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="number" id="editRespawnHours" placeholder="시간" min="0" style="width: 80px;">
+                            <span>시간</span>
+                            <input type="number" id="editRespawnMinutes" placeholder="분" min="0" max="59" style="width: 80px;">
+                            <span>분</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button onclick="saveEditBoss()" class="btn">저장</button>
+                    <button onclick="closeEditModal()" class="btn" style="background: #6c757d;">취소</button>
                 </div>
             </div>
         </div>
 
         <div class="stats">
-            <div class="stat-card">
+            <div class="stat-card" id="statTotal" onclick="setBossFilter('all')">
                 <div class="stat-number" id="totalBosses">0</div>
                 <div class="stat-label">총 보스 수</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="statAlive" onclick="setBossFilter('alive')">
                 <div class="stat-number" id="aliveBosses">0</div>
                 <div class="stat-label">생존 보스</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="statDead" onclick="setBossFilter('dead')">
                 <div class="stat-number" id="deadBosses">0</div>
                 <div class="stat-label">사망 보스</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" id="statSoon" onclick="setBossFilter('soon')">
                 <div class="stat-number" id="respawnSoon">0</div>
                 <div class="stat-label">곧 리젠</div>
             </div>
@@ -650,30 +792,103 @@
             <div class="add-boss-form">
                 <h3 style="margin-bottom: 8px; color: #2c3e50;">새 보스 추가</h3>
                 <form id="bossForm">
-                    <div class="form-row">
-                        <div class="form-group">
+                    <div class="form-row boss-form-row" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: nowrap;">
+                        <div class="form-group" style="min-width: 180px; flex-grow: 1;">
                             <label for="bossName">보스 이름</label>
-                            <input type="text" id="bossName" placeholder="예: 드래곤 킹" required>
+                            <input type="text" id="bossName" placeholder="예: 드래곤 킹" required style="width: 100%;">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="min-width: 120px;">
                             <label for="respawnTime">리젠 시간</label>
                             <div style="display: flex; gap: 5px; align-items: center;">
                                 <input type="number" id="respawnHours" placeholder="0" min="0" max="23" value="0" style="text-align: center; flex: 1;">
                                 <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
                                 <input type="number" id="respawnMinutes" placeholder="0" min="0" max="59" value="0" style="text-align: center; flex: 1;">
                             </div>
-                            <small style="color: #7f8c8d; font-size: 0.7rem;">시:분 (예: 1:30)</small>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="min-width: 160px;">
                             <label for="bossLocation">위치</label>
                             <input type="text" id="bossLocation" placeholder="예: 화산 던전 3층">
                         </div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="submit" class="btn" style="flex: 1;">보스 추가</button>
-                        <button type="button" class="btn" onclick="reviveAllBosses()" style="flex: 1; background: linear-gradient(45deg, #27ae60, #2ecc71);">🔄 전체 리젠</button>
+                        <button type="submit" class="btn" style="min-width: 100px; margin-top: 20px;">보스 추가</button>
                     </div>
                 </form>
+            </div>
+            <!-- 고정보스 등록 폼 -->
+            <div class="add-boss-form" style="margin-top: 18px;">
+                <h3 style="margin-bottom: 8px; color: #2c3e50;">고정보스 등록</h3>
+                <form id="fixedBossForm">
+                    <div class="form-row" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: nowrap;">
+                        <div class="form-group" style="min-width: 200px; flex-grow: 1;">
+                            <label for="fixedBossName">보스 이름</label>
+                            <input type="text" id="fixedBossName" placeholder="예: 월요보스" required style="width: 100%;">
+                        </div>
+                        <div class="form-group" style="min-width: 300px;">
+                            <label>요일 선택</label>
+                            <div class="weekday-selector" style="margin: 0;">
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay0"><label for="fixedDay0">일</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay1"><label for="fixedDay1">월</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay2"><label for="fixedDay2">화</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay3"><label for="fixedDay3">수</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay4"><label for="fixedDay4">목</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay5"><label for="fixedDay5">금</label>
+                                </div>
+                                <div class="weekday-checkbox">
+                                    <input type="checkbox" id="fixedDay6"><label for="fixedDay6">토</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group form-group-hour-minute">
+                            <div style="display: flex; flex-direction: row; gap: 6px; align-items: flex-end; width: 100%;">
+                                <div style="display: flex; flex-direction: column; flex: 1;">
+                                    <label for="fixedHour">시</label>
+                                    <input type="number" id="fixedHour" min="0" max="23" value="0" style="text-align: center;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; flex: 1;">
+                                    <label for="fixedMinute">분</label>
+                                    <input type="number" id="fixedMinute" min="0" max="59" value="0" style="text-align: center;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="min-width: 160px;">
+                            <label for="fixedLocation">위치</label>
+                            <input type="text" id="fixedLocation" placeholder="예: 중앙 광장">
+                        </div>
+                        <button type="submit" class="btn" style="min-width: 100px; margin-top: 20px;">고정보스 등록</button>
+                    </div>
+                </form>
+            </div>
+            <!-- 설정 영역: 전체 리젠 버튼만 별도 배치 -->
+            <div class="add-boss-form" style="margin-top: 18px;">
+                <h3 style="margin-bottom: 8px; color: #2c3e50;">설정</h3>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                    <button type="button" class="btn" onclick="reviveAllBosses()" style="min-width: 120px; background: linear-gradient(45deg, #27ae60, #2ecc71);">🔄 전체 리젠</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 빠른 처치 입력 -->
+        <div id="quickKillSection" style="margin-bottom: 15px; display: none;">
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #e9ecef;">
+                <h4 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 0.9rem;">⚡ 빠른 처치</h4>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="quickKillInput" placeholder="보스이름 ㅋ (예: 타우록스 ㅋ)" 
+                           style="flex: 1; padding: 8px; border: 1px solid #e9ecef; border-radius: 6px; font-size: 0.9rem;">
+                    <button type="button" class="btn btn-small" onclick="processQuickKill()">입력</button>
+                </div>
+                <small style="color: #7f8c8d; font-size: 0.75rem; display: block; margin-top: 4px;">
+                    💡 "보스이름 ㅋ" 또는 "보스이름 컷" 형태로 입력하세요
+                </small>
             </div>
         </div>
 
@@ -686,6 +901,16 @@
     </div>
 
     <script>
+        console.log('스크립트 시작');
+        
+        // Firebase SDK 로드 확인
+        if (typeof firebase === 'undefined') {
+            console.error('Firebase SDK가 로드되지 않았습니다.');
+            alert('Firebase 연결에 문제가 있습니다. 페이지를 새로고침해주세요.');
+        } else {
+            console.log('Firebase SDK 로드 완료');
+        }
+
         // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyAY6Ff6uZ-iZ7soeuXBU0mtTKKZZ8gAPck",
@@ -698,41 +923,315 @@
             measurementId: "G-MC8YY38ZP3"
         };
 
-        // Firebase 초기화
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const bossTimersRef = db.ref('bossTimers');
-
+        let db, bossTimersRef;
         let bosses = [];
         let timers = {};
         let isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
         let currentEditingBoss = null;
+        let audioContext = null;
+        let soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // 기본값 true
+        let bossFilter = 'all';
 
         const ADMIN_EMAIL = 'dogfightda@gmail.com';
         const ADMIN_PASSWORD = '0716';
 
+        // Firebase 초기화
+        try {
+            console.log('Firebase 초기화 시작');
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            bossTimersRef = db.ref('bossTimers');
+            console.log('Firebase 초기화 완료');
+        } catch (error) {
+            console.error('Firebase 초기화 실패:', error);
+            alert('Firebase 초기화에 실패했습니다: ' + error.message);
+        }
+
+        // Web Audio API 초기화
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('Audio Context 초기화 완료');
+            } catch (error) {
+                console.log('Audio Context 초기화 실패:', error);
+                audioContext = null;
+            }
+        }
+
+        // 리젠 알림 사운드 재생 (마법적인 부활 사운드)
+        function playRespawnSound() {
+            if (!audioContext || !soundEnabled) return;
+            
+            try {
+                const startTime = audioContext.currentTime;
+                
+                // 1. 마법적인 윰윰 사운드 (낮은 주파수에서 시작)
+                const magicOsc = audioContext.createOscillator();
+                const magicGain = audioContext.createGain();
+                const magicFilter = audioContext.createBiquadFilter();
+                
+                magicOsc.connect(magicFilter);
+                magicFilter.connect(magicGain);
+                magicGain.connect(audioContext.destination);
+                
+                magicOsc.type = 'sawtooth';
+                magicFilter.type = 'lowpass';
+                magicFilter.frequency.setValueAtTime(200, startTime);
+                magicFilter.frequency.exponentialRampToValueAtTime(800, startTime + 0.4);
+                
+                magicOsc.frequency.setValueAtTime(60, startTime);
+                magicOsc.frequency.exponentialRampToValueAtTime(120, startTime + 0.4);
+                
+                magicGain.gain.setValueAtTime(0, startTime);
+                magicGain.gain.linearRampToValueAtTime(0.15, startTime + 0.05);
+                magicGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+                
+                magicOsc.start(startTime);
+                magicOsc.stop(startTime + 0.4);
+                
+                // 2. 리젠 완료 반짝임 사운드 (높은 주파수 벨소리)
+                const sparkleFreqs = [1047, 1319, 1568, 2093]; // C6-E6-G6-C7
+                sparkleFreqs.forEach((freq, index) => {
+                    const sparkleOsc = audioContext.createOscillator();
+                    const sparkleGain = audioContext.createGain();
+                    
+                    sparkleOsc.connect(sparkleGain);
+                    sparkleGain.connect(audioContext.destination);
+                    
+                    sparkleOsc.type = 'sine';
+                    sparkleOsc.frequency.setValueAtTime(freq, startTime + 0.3 + index * 0.08);
+                    
+                    sparkleGain.gain.setValueAtTime(0, startTime + 0.3 + index * 0.08);
+                    sparkleGain.gain.linearRampToValueAtTime(0.2, startTime + 0.32 + index * 0.08);
+                    sparkleGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5 + index * 0.08);
+                    
+                    sparkleOsc.start(startTime + 0.3 + index * 0.08);
+                    sparkleOsc.stop(startTime + 0.5 + index * 0.08);
+                });
+                
+                // 3. 파워풀한 베이스 펀치
+                const bassOsc = audioContext.createOscillator();
+                const bassGain = audioContext.createGain();
+                
+                bassOsc.connect(bassGain);
+                bassGain.connect(audioContext.destination);
+                
+                bassOsc.type = 'triangle';
+                bassOsc.frequency.setValueAtTime(65, startTime + 0.35); // C2
+                
+                bassGain.gain.setValueAtTime(0, startTime + 0.35);
+                bassGain.gain.linearRampToValueAtTime(0.25, startTime + 0.37);
+                bassGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.55);
+                
+                bassOsc.start(startTime + 0.35);
+                bassOsc.stop(startTime + 0.55);
+                
+                console.log('마법적인 리젠 사운드 재생');
+            } catch (error) {
+                console.error('리젠 사운드 재생 실패:', error);
+            }
+        }
+
+        // 처치 알림 사운드 재생 (전투적인 타격 사운드)
+        function playKillSound() {
+            if (!audioContext || !soundEnabled) return;
+            
+            try {
+                const startTime = audioContext.currentTime;
+                
+                // 1. 강력한 타격음 (급격한 노이즈 버스트)
+                const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+                const noiseData = noiseBuffer.getChannelData(0);
+                
+                // 화이트 노이즈 생성
+                for (let i = 0; i < noiseData.length; i++) {
+                    noiseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / noiseData.length, 3);
+                }
+                
+                const noiseSource = audioContext.createBufferSource();
+                const noiseGain = audioContext.createGain();
+                const noiseFilter = audioContext.createBiquadFilter();
+                
+                noiseSource.buffer = noiseBuffer;
+                noiseSource.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(audioContext.destination);
+                
+                noiseFilter.type = 'bandpass';
+                noiseFilter.frequency.setValueAtTime(1500, startTime);
+                noiseFilter.Q.setValueAtTime(10, startTime);
+                
+                noiseGain.gain.setValueAtTime(0.3, startTime);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+                
+                noiseSource.start(startTime);
+                
+                // 2. 강력한 타격의 베이스 임팩트
+                const impactOsc = audioContext.createOscillator();
+                const impactGain = audioContext.createGain();
+                
+                impactOsc.connect(impactGain);
+                impactGain.connect(audioContext.destination);
+                
+                impactOsc.type = 'sawtooth';
+                impactOsc.frequency.setValueAtTime(80, startTime);
+                impactOsc.frequency.exponentialRampToValueAtTime(40, startTime + 0.15);
+                
+                impactGain.gain.setValueAtTime(0.4, startTime);
+                impactGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+                
+                impactOsc.start(startTime);
+                impactOsc.stop(startTime + 0.15);
+                
+                // 3. 칼날 소리 (금속성 링)
+                const metalOsc = audioContext.createOscillator();
+                const metalGain = audioContext.createGain();
+                const metalFilter = audioContext.createBiquadFilter();
+                
+                metalOsc.connect(metalFilter);
+                metalFilter.connect(metalGain);
+                metalGain.connect(audioContext.destination);
+                
+                metalOsc.type = 'square';
+                metalOsc.frequency.setValueAtTime(1200, startTime + 0.02);
+                metalOsc.frequency.exponentialRampToValueAtTime(600, startTime + 0.25);
+                
+                metalFilter.type = 'highpass';
+                metalFilter.frequency.setValueAtTime(800, startTime + 0.02);
+                
+                metalGain.gain.setValueAtTime(0, startTime + 0.02);
+                metalGain.gain.linearRampToValueAtTime(0.15, startTime + 0.04);
+                metalGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+                
+                metalOsc.start(startTime + 0.02);
+                metalOsc.stop(startTime + 0.25);
+                
+                // 4. 마무리 충격파
+                const shockOsc = audioContext.createOscillator();
+                const shockGain = audioContext.createGain();
+                
+                shockOsc.connect(shockGain);
+                shockGain.connect(audioContext.destination);
+                
+                shockOsc.type = 'triangle';
+                shockOsc.frequency.setValueAtTime(150, startTime + 0.1);
+                shockOsc.frequency.exponentialRampToValueAtTime(50, startTime + 0.3);
+                
+                shockGain.gain.setValueAtTime(0, startTime + 0.1);
+                shockGain.gain.linearRampToValueAtTime(0.2, startTime + 0.12);
+                shockGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+                
+                shockOsc.start(startTime + 0.1);
+                shockOsc.stop(startTime + 0.3);
+                
+                console.log('강력한 처치 사운드 재생');
+            } catch (error) {
+                console.error('처치 사운드 재생 실패:', error);
+            }
+        }
+
         // 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 이벤트 발생');
+            
+            try {
             updateLoginStatus();
-            loadBossesFromFirebase();
+                console.log('로그인 상태 업데이트 완료');
+                
+                if (bossTimersRef) {
+                    setupFirebaseListeners();
+                    console.log('Firebase 데이터 로드 시작');
+                } else {
+                    console.error('bossTimersRef가 초기화되지 않았습니다');
+                }
+                
             startTimers();
+                console.log('타이머 시작 완료');
+                
+                // 빠른 처치 입력 필드 이벤트 등록
+                setupQuickKillInput();
+                console.log('빠른 처치 입력 설정 완료');
+                
+                // 오디오 초기화
+                initAudio();
+                console.log('오디오 초기화 완료');
+                
+                // 사운드 버튼 초기화
+                updateSoundButton();
+                
+                setBossFilter('all'); // 기본값 전체 보스
+            } catch (error) {
+                console.error('초기화 중 에러 발생:', error);
+                alert('초기화 중 문제가 발생했습니다: ' + error.message);
+            }
         });
 
-        // Firebase에서 보스 데이터 로드
-        function loadBossesFromFirebase() {
+        // Firebase 리스너 설정
+        function setupFirebaseListeners() {
+            if (!bossTimersRef) return;
+            
+            let previousData = null;
+            
             bossTimersRef.on('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    bosses = Object.keys(data).map(key => ({
-                        ...data[key],
-                        id: parseInt(key)
-                    }));
-                } else {
-                    bosses = [];
+                const data = snapshot.val() || {};
+                
+                // 데이터가 실제로 변경되었는지 확인
+                const currentDataString = JSON.stringify(data);
+                if (currentDataString === previousData) {
+                    return; // 변경사항이 없으면 렌더링 스킵
                 }
+                previousData = currentDataString;
+                
+                bosses = Object.keys(data).map(key => ({
+                    id: parseInt(key),
+                    ...data[key]
+                }));
+                
+                console.log('Firebase에서 보스 데이터 로드됨:', bosses.length, '개');
                 renderBosses();
-                updateStats();
             });
+        }
+
+        // 빠른 처치 입력 설정 함수
+        function setupQuickKillInput() {
+            const quickKillInput = document.getElementById('quickKillInput');
+            console.log('quickKillInput 요소:', quickKillInput);
+            
+            if (quickKillInput) {
+                console.log('엔터키 이벤트 리스너 등록');
+                quickKillInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        
+                        // 입력 버튼 시각적 효과
+                        const inputButton = document.querySelector('#quickKillSection button');
+                        if (inputButton) {
+                            inputButton.style.transform = 'translateY(1px)';
+                            inputButton.style.boxShadow = '0 1px 3px rgba(102, 126, 234, 0.2)';
+                            
+                            setTimeout(() => {
+                                inputButton.style.transform = '';
+                                inputButton.style.boxShadow = '';
+                            }, 150);
+                        }
+                        
+                        processQuickKill();
+                    }
+                });
+                
+                // 입력 필드 포커스 시 시각적 피드백
+                quickKillInput.addEventListener('focus', function() {
+                    this.style.borderColor = '#667eea';
+                    this.style.boxShadow = '0 0 0 2px rgba(102, 126, 234, 0.1)';
+                });
+                
+                quickKillInput.addEventListener('blur', function() {
+                    this.style.borderColor = '#e9ecef';
+                    this.style.boxShadow = '';
+                });
+            } else {
+                console.error('quickKillInput 요소를 찾을 수 없습니다');
+            }
         }
 
         // 로그인 모달 관련 함수들
@@ -810,13 +1309,13 @@
 
             if (isLoggedIn) {
                 loginStatus.innerHTML = `
-                    <div class="user-info">👤 관리자</div>
+                    <div class="user-info">관리자</div>
                     <button class="logout-btn" onclick="logout()">로그아웃</button>
                 `;
                 container.classList.add('admin-logged-in');
             } else {
                 loginStatus.innerHTML = `
-                    <div class="user-info">👁️ 게스트 모드</div>
+                    <div class="user-info">게스트 모드</div>
                     <button class="login-btn" onclick="showLoginModal()">관리자</button>
                 `;
                 container.classList.remove('admin-logged-in');
@@ -844,16 +1343,18 @@
                 status: 'alive',
                 lastKilled: null,
                 nextRespawn: null,
-                createdAt: new Date().toLocaleString()
+                unregistered: false,
+                autoProcessed: false,
+                createdAt: new Date().toISOString()
             };
 
             // Firebase에 보스 데이터 저장
             bossTimersRef.child(bossData.id.toString()).set(bossData)
                 .then(() => {
-                    document.getElementById('bossForm').reset();
+            document.getElementById('bossForm').reset();
                     document.getElementById('respawnHours').value = '0';
                     document.getElementById('respawnMinutes').value = '0';
-                    showNotification(`${bossData.name} 보스가 추가되었습니다!`);
+            showNotification(`${bossData.name} 보스가 추가되었습니다!`);
                 })
                 .catch((error) => {
                     console.error('보스 추가 실패:', error);
@@ -861,48 +1362,117 @@
                 });
         });
 
-        // 보스 렌더링
+        // 보스 렌더링 (Firebase 리스너 전용)
         function renderBosses() {
-            const container = document.getElementById('bossContainer');
+            renderBossesUI();
+            updateStats();
+        }
             
+        // 보스 목록 렌더링 (Firebase 리스너 전용)
+        function renderBossesUI() {
+            const container = document.getElementById('bossContainer');
+            const quickKillSection = document.getElementById('quickKillSection');
             if (bosses.length === 0) {
                 container.innerHTML = '<div class="empty-state"><h3>등록된 보스가 없습니다</h3><p>위의 양식을 사용해서 첫 번째 보스를 추가해보세요!</p></div>';
+                quickKillSection.style.display = 'none';
                 return;
             }
-            
-            // 보스 정렬
-            const sortedBosses = [...bosses].sort((a, b) => {
+            quickKillSection.style.display = 'block';
+            let filteredBosses = bosses;
+            if (bossFilter === 'alive') {
                 const now = new Date();
-                
-                // 보스 a의 남은 시간 계산
-                let timeA = 0;
-                if (a.status === 'dead' && a.nextRespawn) {
-                    timeA = new Date(a.nextRespawn) - now;
-                    if (timeA <= 0) timeA = 0; // 이미 리젠된 경우
-                } else if (a.status === 'alive') {
-                    timeA = Infinity; // 대기중인 보스는 가장 나중에
+                filteredBosses = bosses.filter(b => {
+                    // 생존 상태인 보스
+                    if (b.status === 'alive') return true;
+                    
+                    // 일반 보스의 곧 리젠 상태 확인
+                    if (b.status === 'dead' && b.nextRespawn) {
+                        const time = new Date(b.nextRespawn) - now;
+                        if (time > 0 && time <= 600000) return true;
+                    }
+                    
+                    // 고정 보스의 곧 리젠 상태 확인
+                    if (b.fixed) {
+                        let minNextDiff = 7 * 24 * 60;
+                        b.fixedDays.forEach(day => {
+                            let diff = (day - now.getDay()) * 24 * 60 
+                                + (b.fixedHour - now.getHours()) * 60 
+                                + (b.fixedMinute - now.getMinutes());
+                            if (diff <= 0) diff += 7 * 24 * 60;
+                            minNextDiff = Math.min(minNextDiff, diff);
+                        });
+                        if (minNextDiff * 60 * 1000 <= 600000) return true;
+                    }
+                    
+                    return false;
+                });
+            } else if (bossFilter === 'dead') {
+                filteredBosses = bosses.filter(b => b.status === 'dead');
+            } else if (bossFilter === 'soon') {
+                filteredBosses = bosses.filter(b => b.status === 'dead' && b.nextRespawn && (new Date(b.nextRespawn) - new Date() > 0) && (new Date(b.nextRespawn) - new Date() <= 600000));
+            }
+            const sortedBosses = [...filteredBosses].sort((a, b) => {
+                const now = new Date();
+
+                // 보스의 다음 리젠/상태 시간을 계산하는 함수
+                function getNextTime(boss) {
+                    if (boss.status === 'alive') {
+                        return Infinity;  // 살아있는 보스는 최상단
+                    }
+
+                    const now = new Date();
+                    
+                    if (boss.fixed) {
+                        // 고정보스의 다음 리젠 시간 계산
+                        const nowDay = now.getDay();
+                        const nowHour = now.getHours();
+                        const nowMinute = now.getMinutes();
+                        let minNextDiff = 7 * 24 * 60;
+                        
+                        boss.fixedDays.forEach(day => {
+                            let diff = (day - nowDay) * 24 * 60 
+                                + (boss.fixedHour - nowHour) * 60 
+                                + (boss.fixedMinute - nowMinute);
+                            if (diff <= 0) diff += 7 * 24 * 60;
+                            minNextDiff = Math.min(minNextDiff, diff);
+                        });
+                        
+                        const nextTime = minNextDiff * 60 * 1000;  // 밀리초 단위로 변환
+                        return nextTime;
+                    }
+
+                    if (boss.status === 'dead' && boss.nextRespawn) {
+                        const time = new Date(boss.nextRespawn) - now;
+                        return time > 0 ? time : 0;
+                    }
+
+                    return 9999999999;  // 기타 상태는 맨 아래로
                 }
-                
-                // 보스 b의 남은 시간 계산
-                let timeB = 0;
-                if (b.status === 'dead' && b.nextRespawn) {
-                    timeB = new Date(b.nextRespawn) - now;
-                    if (timeB <= 0) timeB = 0; // 이미 리젠된 경우
-                } else if (b.status === 'alive') {
-                    timeB = Infinity; // 대기중인 보스는 가장 나중에
-                }
-                
+
+                const timeA = getNextTime(a);
+                const timeB = getNextTime(b);
+
                 // 둘 다 대기중인 경우 이름순으로 정렬
                 if (timeA === Infinity && timeB === Infinity) {
+                    // 고정보스를 일반보스보다 위에 배치
+                    if (a.fixed && !b.fixed) return -1;
+                    if (!a.fixed && b.fixed) return 1;
                     return a.name.localeCompare(b.name, 'ko');
                 }
-                
+
                 // 대기중인 보스가 최상단에 오도록
                 if (timeA === Infinity) return -1;
                 if (timeB === Infinity) return 1;
-                
+
                 // 남은 시간이 적은 순서대로 정렬
-                return timeA - timeB;
+                if (timeA !== timeB) return timeA - timeB;
+
+                // 시간이 같은 경우 고정보스를 위에 배치
+                if (a.fixed && !b.fixed) return -1;
+                if (!a.fixed && b.fixed) return 1;
+
+                // 그 외의 경우 이름순
+                return a.name.localeCompare(b.name, 'ko');
             });
             
             container.innerHTML = `
@@ -918,32 +1488,174 @@
             let statusClass = 'alive';
             let statusText = '생존';
             let timerDisplay = '대기 중';
+            let isUnregistered = false;
             
             // 리젠 시간을 시간:분 형태로 표시
-            const respawnHours = Math.floor(boss.respawnTime / 60);
-            const respawnMins = boss.respawnTime % 60;
-            const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
+            let timeDisplay = '';
+            if (boss.fixed) {
+                const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                const fixedDaysText = boss.fixedDays.map(day => dayNames[day]).join(', ');
+                timeDisplay = `<span>📅 ${fixedDaysText}요일 ${boss.fixedHour.toString().padStart(2, '0')}:${boss.fixedMinute.toString().padStart(2, '0')}</span>`;
+            } else {
+                const respawnHours = Math.floor(boss.respawnTime / 60);
+                const respawnMins = boss.respawnTime % 60;
+                timeDisplay = `<span>⏱️ ${respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`}</span>`;
+            }
             
-            if (boss.status === 'dead' && boss.nextRespawn) {
-                const respawnTime = new Date(boss.nextRespawn);
-                const timeDiff = respawnTime - now;
+            // 카드 하단에 항상 마지막 컷 시간 표기 (24시간제, NaN 방지)
+            let lastKilledDisplay = '';
+            if (boss.fixed) {
+                // 고정보스는 가장 최근의 리젠 시각(요일/시/분) 표기
+                const now = new Date();
+                const nowDay = now.getDay();
+                const nowHour = now.getHours();
+                const nowMinute = now.getMinutes();
                 
-                if (timeDiff <= 0) {
-                    // 자동 리젠 처리
-                    const updatedBoss = {
-                        ...boss,
-                        status: 'alive',
-                        lastKilled: null,
-                        nextRespawn: null
-                    };
-                    bossTimersRef.child(boss.id.toString()).update(updatedBoss);
+                // 다음 리젠 요일/시/분 (항상 미래)
+                let minNextDiff = 7 * 24 * 60;
+                let nextDay = nowDay;
+                boss.fixedDays.forEach(day => {
+                    let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
+                    if (diff <= 0) diff += 7 * 24 * 60;
+                    if (diff < minNextDiff) {
+                        minNextDiff = diff;
+                        nextDay = day;
+                    }
+                });
+                
+                // 가장 최근 리젠 시각 계산
+                let minDiff = 7 * 24 * 60;
+                let lastDay = nowDay;
+                boss.fixedDays.forEach(day => {
+                    let diff = (nowDay - day) * 24 * 60 + (nowHour - boss.fixedHour) * 60 + (nowMinute - boss.fixedMinute);
+                    if (diff < 0) diff += 7 * 24 * 60;
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        lastDay = day;
+                    }
+                });
+                
+                const lastRegen = new Date(now);
+                lastRegen.setDate(now.getDate() - ((nowDay - lastDay + 7) % 7));
+                lastRegen.setHours(boss.fixedHour);
+                lastRegen.setMinutes(boss.fixedMinute);
+                lastRegen.setSeconds(0);
+
+                const nextRegen = new Date(now);
+                nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
+                nextRegen.setHours(boss.fixedHour);
+                nextRegen.setMinutes(boss.fixedMinute);
+                nextRegen.setSeconds(0);
+                
+                if (!isNaN(lastRegen.getTime())) {
+                    const hour = lastRegen.getHours().toString().padStart(2, '0');
+                    const min = lastRegen.getMinutes().toString().padStart(2, '0');
+                    const sec = lastRegen.getSeconds().toString().padStart(2, '0');
+                    
+                    const nextHour = nextRegen.getHours().toString().padStart(2, '0');
+                    const nextMin = nextRegen.getMinutes().toString().padStart(2, '0');
+                    const nextSec = nextRegen.getSeconds().toString().padStart(2, '0');
+                    
+                    lastKilledDisplay = `<span>🗡️ 마지막 컷: ${hour}:${min}:${sec}</span><span style="margin-left: 10px;">⏰ 다음 리젠: ${nextHour}:${nextMin}:${nextSec}</span>`;
+                }
+            } else if (boss.lastKilled) {
+                const killedTime = new Date(boss.lastKilled);
+                if (!isNaN(killedTime.getTime())) {
+                    const hour = killedTime.getHours().toString().padStart(2, '0');
+                    const min = killedTime.getMinutes().toString().padStart(2, '0');
+                    const sec = killedTime.getSeconds().toString().padStart(2, '0');
+                    
+                    // 리젠 예상 시간 계산
+                    const expectedRespawnTime = new Date(killedTime.getTime() + boss.respawnTime * 60000);
+                    const respawnHour = expectedRespawnTime.getHours().toString().padStart(2, '0');
+                    const respawnMin = expectedRespawnTime.getMinutes().toString().padStart(2, '0');
+                    const respawnSec = expectedRespawnTime.getSeconds().toString().padStart(2, '0');
+                    
+                    lastKilledDisplay = `<span>🗡️ 마지막 컷: ${hour}:${min}:${sec}</span><span style="margin-left: 10px;">⏰ 다음 리젠: ${respawnHour}:${respawnMin}:${respawnSec}</span>`;
+                }
+            }
+
+            // 고정보스: 다음 리젠까지 남은 시간 계산 및 상태 표시
+            if (boss.fixed) {
+                // 고정보스 남은 시간 계산 개선
+                const nowDay = now.getDay();
+                const nowHour = now.getHours();
+                const nowMinute = now.getMinutes();
+                
+                // 다음 리젠 요일/시/분 (항상 미래)
+                let minNextDiff = 7 * 24 * 60;
+                let nextDay = nowDay;
+                boss.fixedDays.forEach(day => {
+                    let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
+                    if (diff <= 0) diff += 7 * 24 * 60;
+                    if (diff < minNextDiff) {
+                        minNextDiff = diff;
+                        nextDay = day;
+                    }
+                });
+                const nextRegen = new Date(now);
+                nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
+                nextRegen.setHours(boss.fixedHour);
+                nextRegen.setMinutes(boss.fixedMinute);
+                nextRegen.setSeconds(0);
+
+                // 상태 판단 로직 개선
+                if (boss.status === 'dead') {
+                    let diff = nextRegen - now;
+                    if (diff < 0) diff += 7 * 24 * 60 * 60 * 1000;
+                    if (diff <= 600000) {
+                        statusClass = 'respawn-soon';
+                        statusText = '곧 리젠';
+                    } else if (diff <= 0) {
+                        statusClass = 'alive';
+                        statusText = '생존';
+                        timerDisplay = '대기 중';
+                    } else {
+                        statusClass = 'dead';
+                        statusText = '사망';
+                    }
+                    timerDisplay = diff > 0 ? formatTime(diff) : '대기 중';
+                } else if (boss.status === 'alive') {
+                    // alive 상태일 때는 상태를 변경하지 않고 대기 중만 표시
                     statusClass = 'alive';
                     statusText = '생존';
-                    timerDisplay = '리젠 완료!';
+                    timerDisplay = '대기 중';
+                }
+            } else if (boss.status === 'alive') {
+                isUnregistered = boss.unregistered || false;
+                // lastKilled이 있다면 리젠 시간까지 계산해서 표시
+                if (boss.lastKilled) {
+                    const killedTime = new Date(boss.lastKilled);
+                    const expectedRespawnTime = new Date(killedTime.getTime() + boss.respawnTime * 60000);
+                    const timeDiff = expectedRespawnTime - now;
+                    if (timeDiff > 0) {
+                        // 리젠까지 남은 시간 (미등록이면 미등록 붙임)
+                        statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead';
+                        statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
+                        timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
+                    } else {
+                        // 리젠 완료 후 대기중
+                        statusClass = 'alive';
+                        statusText = '생존';
+                        timerDisplay = '대기 중';
+                    }
                 } else {
-                    statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead'; // 10분 전부터 곧 리젠
+                    // 컷 기록이 없는 경우 - 진짜 대기중
+                    statusText = '생존';
+                    timerDisplay = '대기 중';
+                }
+            } else if (boss.status === 'dead' && boss.nextRespawn) {
+                const respawnTime = new Date(boss.nextRespawn);
+                const timeDiff = respawnTime - now;
+                isUnregistered = boss.unregistered || false;
+                if (timeDiff > 0) {
+                    statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead';
                     statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
-                    timerDisplay = formatTime(timeDiff);
+                    timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
+                } else {
+                    statusClass = 'alive';
+                    statusText = '생존';
+                    timerDisplay = '대기 중';
                 }
             }
 
@@ -953,25 +1665,27 @@
                         <div class="boss-status status-${statusClass === 'respawn-soon' ? 'soon' : statusClass}">
                             ${statusText}
                         </div>
-                        <div class="boss-name">${boss.name}</div>
+                        <div class="boss-name">${boss.name}
+                            ${boss.fixed ? '<span style=\"background:#3b4cca;color:#fff;font-size:0.7em;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;\">고정</span>' : ''}
+                        </div>
                         <div class="boss-details">
                             <span>📍 ${boss.location}</span>
-                            <span>⏱️ ${respawnTimeText}</span>
-                            ${boss.lastKilled ? `<span>🗡️ ${new Date(boss.lastKilled).toLocaleTimeString()}</span>` : ''}
+                            ${timeDisplay}
+                            ${lastKilledDisplay}
                         </div>
                     </div>
                     <div class="boss-right">
-                        <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''}" id="timer-${boss.id}">
+                        <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''} ${isUnregistered ? 'unregistered' : ''}" id="timer-${boss.id}">
                             ${timerDisplay}
-                        </div>
-                        <div class="boss-actions">
-                            ${boss.status === 'alive' ? 
-                                `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>` :
-                                `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>`
-                            }
-                            <button class="btn btn-small admin-only" onclick="showEditModal(${boss.id})" style="background: #6c757d;">수정</button>
-                            <button class="btn btn-small delete-btn" onclick="deleteBoss(${boss.id})">삭제</button>
-                        </div>
+                    </div>
+                    <div class="boss-actions">
+                        ${(boss.fixed && statusClass === 'dead') || boss.status === 'dead' ? 
+                            `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>` :
+                            `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>`
+                        }
+                        <button class="btn btn-small admin-only" onclick="showEditModal(${boss.id})" style="background: #6c757d;">수정</button>
+                        <button class="btn btn-small delete-btn" onclick="deleteBoss(${boss.id})">삭제</button>
+                    </div>
                     </div>
                 </div>
             `;
@@ -981,22 +1695,53 @@
         function killBoss(id) {
             const boss = bosses.find(b => b.id === id);
             if (!boss) return;
-            
             const now = new Date();
-            const updatedBoss = {
-                ...boss,
-                status: 'dead',
-                lastKilled: now.toISOString(),
-                nextRespawn: new Date(now.getTime() + boss.respawnTime * 60000).toISOString()
-            };
-            
-            const respawnHours = Math.floor(boss.respawnTime / 60);
-            const respawnMins = boss.respawnTime % 60;
-            const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
-            
+            let updatedBoss;
+            if (boss.fixed) {
+                // 고정보스의 다음 리젠 시간 계산
+                const nowDay = now.getDay();
+                const nowHour = now.getHours();
+                const nowMinute = now.getMinutes();
+                let minNextDiff = 7 * 24 * 60;
+                let nextDay = nowDay;
+                
+                boss.fixedDays.forEach(day => {
+                    let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
+                    if (diff <= 0) diff += 7 * 24 * 60;
+                    if (diff < minNextDiff) {
+                        minNextDiff = diff;
+                        nextDay = day;
+                    }
+                });
+                
+                const nextRegen = new Date(now);
+                nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
+                nextRegen.setHours(boss.fixedHour);
+                nextRegen.setMinutes(boss.fixedMinute);
+                nextRegen.setSeconds(0);
+                
+                updatedBoss = {
+                    ...boss,
+                    status: 'dead',
+                    lastKilled: now.toISOString(),
+                    nextRespawn: nextRegen.toISOString(),  // 다음 리젠 시간 설정
+                    unregistered: false,
+                    autoProcessed: false  // 수동 처치 시에는 false로 설정
+                };
+            } else {
+                updatedBoss = {
+                    ...boss,
+                    status: 'dead',
+                    lastKilled: now.toISOString(),
+                    nextRespawn: new Date(now.getTime() + boss.respawnTime * 60000).toISOString(),
+                    unregistered: false, // 수동 처치 시 미등록 상태 해제
+                    autoProcessed: true
+                };
+            }
             bossTimersRef.child(id.toString()).update(updatedBoss)
                 .then(() => {
-                    showNotification(`${boss.name}을(를) 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
+                    playKillSound(); // 처치 사운드 재생
+                    showNotification(`${boss.name}을(를) 처치했습니다! ${formatTime(boss.respawnTime)} 후 리젠됩니다.`);
                 })
                 .catch((error) => {
                     console.error('보스 처치 업데이트 실패:', error);
@@ -1012,13 +1757,16 @@
             const updatedBoss = {
                 ...boss,
                 status: 'alive',
-                lastKilled: null,
+                // 미등록 보스는 lastKilled 유지, 정상 보스는 lastKilled 초기화
+                lastKilled: boss.unregistered ? boss.lastKilled : null,
                 nextRespawn: null
             };
             
             bossTimersRef.child(id.toString()).update(updatedBoss)
                 .then(() => {
-                    showNotification(`${boss.name}이(가) 리젠되었습니다!`);
+                    playRespawnSound(); // 리젠 사운드 재생
+                    const statusText = boss.unregistered ? '(미등록 상태 유지)' : '';
+                    showNotification(`${boss.name}이(가) 리젠되었습니다! ${statusText}`);
                 })
                 .catch((error) => {
                     console.error('보스 리젠 업데이트 실패:', error);
@@ -1036,7 +1784,7 @@
             if (confirm('정말로 이 보스를 삭제하시겠습니까?')) {
                 bossTimersRef.child(id.toString()).remove()
                     .then(() => {
-                        showNotification('보스가 삭제되었습니다.');
+                showNotification('보스가 삭제되었습니다.');
                     })
                     .catch((error) => {
                         console.error('보스 삭제 실패:', error);
@@ -1059,12 +1807,463 @@
             }
         }
 
-        // 타이머 시작
+        // 타이머 시작 (UI 업데이트만, Firebase 업데이트 없음)
         function startTimers() {
+            // UI 업데이트를 1초마다로 변경
             setInterval(() => {
-                renderBosses();
+                renderBossesUI();
                 updateStats();
             }, 1000);
+            // 자동 처리는 10초마다 체크 (Firebase 부하 대폭 감소)
+            setInterval(() => {
+                checkAutoProcessing();
+            }, 10000);
+        }
+
+        // 자동 처리 체크 (5분마다만 실행)
+        function checkAutoProcessing() {
+            const now = new Date();
+            const updates = {};
+            let hasUpdates = false;
+            
+            bosses.forEach(boss => {
+                // [고정보스 자동 리젠]
+                if (boss.fixed) {
+                    const nowDay = now.getDay();
+                    const nowHour = now.getHours();
+                    const nowMinute = now.getMinutes();
+                    
+                    // 다음 리젠 시각 계산
+                    let minNextDiff = 7 * 24 * 60;
+                    let nextDay = nowDay;
+                    boss.fixedDays.forEach(day => {
+                        let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
+                        if (diff <= 0) diff += 7 * 24 * 60;
+                        if (diff < minNextDiff) {
+                            minNextDiff = diff;
+                            nextDay = day;
+                        }
+                    });
+                    
+                    const nextRegen = new Date(now);
+                    nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
+                    nextRegen.setHours(boss.fixedHour);
+                    nextRegen.setMinutes(boss.fixedMinute);
+                    nextRegen.setSeconds(0);
+
+                    // 현재가 리젠 타임인지 확인 (정확히 분단위까지만 체크)
+                    const isRegenTime = boss.fixedDays.includes(nowDay) &&
+                                      boss.fixedHour === nowHour &&
+                                      boss.fixedMinute === nowMinute;
+
+                    // 수동으로 처치된 경우는 자동 처리하지 않음
+                    if (!boss.autoProcessed) {
+                        if (boss.status === 'dead' && isRegenTime) {
+                            // dead 상태에서 리젠 타임이면 alive로 변경
+                            updates[`${boss.id}/status`] = 'alive';
+                            updates[`${boss.id}/lastKilled`] = null;
+                            updates[`${boss.id}/nextRespawn`] = null;
+                            updates[`${boss.id}/autoProcessed`] = false;
+                            updates[`${boss.id}/unregistered`] = false;
+                            hasUpdates = true;
+                        } 
+                        else if (boss.status === 'alive' && !boss.lastKilled) {
+                            // 현재 시간이 리젠 시간으로부터 5분 이상 지났는지 확인
+                            const currentMinutes = nowHour * 60 + nowMinute;
+                            const regenMinutes = boss.fixedHour * 60 + boss.fixedMinute;
+                            let timeSinceRegen = currentMinutes - regenMinutes;
+                            
+                            // 자정을 넘긴 경우 처리
+                            if (timeSinceRegen < -18 * 60) { // 자정을 넘긴 경우 (6시간 이상 차이나면)
+                                timeSinceRegen += 24 * 60;
+                            }
+                            
+                            // 리젠 시간으로부터 5분 이상 지났고, 수동 처치되지 않은 경우에만 자동 처치
+                            if (timeSinceRegen >= 5) {
+                                updates[`${boss.id}/status`] = 'dead';
+                                updates[`${boss.id}/lastKilled`] = now.toISOString();
+                                updates[`${boss.id}/nextRespawn`] = nextRegen.toISOString();
+                                updates[`${boss.id}/autoProcessed`] = true;
+                                updates[`${boss.id}/unregistered`] = false;
+                                hasUpdates = true;
+                            }
+                        }
+                    }
+                }
+                // [기존 일반 보스 자동처리 로직]
+                // 컷 시간이 있는 보스만 자동 처치 체크
+                if (boss.status === 'alive' && boss.lastKilled && !boss.autoProcessed) {
+                    const lastKilledTime = new Date(boss.lastKilled);
+                    const expectedRespawnTime = new Date(lastKilledTime.getTime() + boss.respawnTime * 60000);
+                    const fiveMinutesAfterRespawn = new Date(expectedRespawnTime.getTime() + 5 * 60 * 1000);
+                    
+                    // 예상 리젠 시간에서 5분이 지났는지 체크
+                    if (now >= fiveMinutesAfterRespawn) {
+                        console.log(`${boss.name}: 예상 리젠(${expectedRespawnTime.toLocaleString()})에서 5분 경과 -> 자동 컷 처리`);
+                        
+                        // 예상 리젠 시간에 잡았다고 간주하고 lastKilled 업데이트
+                        const newKillTime = expectedRespawnTime;
+                        const newRespawnTime = new Date(newKillTime.getTime() + boss.respawnTime * 60000);
+                        
+                        updates[`${boss.id}/status`] = 'dead';
+                        updates[`${boss.id}/lastKilled`] = newKillTime.toISOString();
+                        updates[`${boss.id}/nextRespawn`] = newRespawnTime.toISOString();
+                        updates[`${boss.id}/autoProcessed`] = true;
+                        updates[`${boss.id}/unregistered`] = true;
+                        hasUpdates = true;
+                        
+                        console.log(`${boss.name}: 새로운 컷시간 ${newKillTime.toLocaleString()} -> 다음 리젠 ${newRespawnTime.toLocaleString()}`);
+                    }
+                }
+                
+                // 한번도 컷 시간이 없는 보스는 무한 대기 (자동 처치 안됨)
+                // if (!boss.lastKilled) -> 아무것도 하지 않음
+                
+                // alive 상태이지만 lastKilled이 있고 리젠 시간이 지난 경우 처리
+                if (boss.status === 'alive' && boss.lastKilled && boss.unregistered) {
+                    const killedTime = new Date(boss.lastKilled);
+                    const expectedRespawnTime = new Date(killedTime.getTime() + boss.respawnTime * 60000);
+                    
+                    if (expectedRespawnTime <= now) {
+                        // 리젠 시간이 지났으므로 미등록 상태 해제
+                        console.log(`${boss.name}: 리젠 시간 완료, 미등록 상태 해제`);
+                        // 미등록 상태는 유지하되 autoProcessed만 리셋
+                        updates[`${boss.id}/autoProcessed`] = false;
+                        hasUpdates = true;
+                    }
+                }
+                
+                // 리젠 완료 처리 (dead 상태에서 nextRespawn이 있는 경우)
+                if (!boss.fixed && boss.status === 'dead' && boss.nextRespawn) {  // 고정보스가 아닌 경우에만 처리
+                    const respawnTime = new Date(boss.nextRespawn);
+                    if (respawnTime <= now) {
+                        updates[`${boss.id}/status`] = 'alive';
+                        updates[`${boss.id}/nextRespawn`] = null;
+                        updates[`${boss.id}/autoProcessed`] = false;
+                        hasUpdates = true;
+                    }
+                }
+            });
+            
+            // 업데이트가 있을 때만 Firebase 호출
+            if (hasUpdates && bossTimersRef) {
+                // 리젠된 보스가 있는지 확인
+                const hasRespawns = Object.keys(updates).some(key => key.endsWith('/status') && updates[key] === 'alive');
+                
+                bossTimersRef.update(updates)
+                    .then(() => {
+                        console.log('자동 처리 업데이트 완료');
+                        if (hasRespawns) {
+                            playRespawnSound(); // 자동 리젠 사운드 재생
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('자동 처리 업데이트 실패:', error);
+                    });
+            }
+        }
+
+        // 보스 수정 모달 관련 함수들
+        function showEditModal(bossId) {
+            const boss = bosses.find(b => b.id === bossId);
+            if (!boss) return;
+            
+            currentEditingBoss = boss;
+            
+            // 모달에 현재 보스 정보 채우기
+            document.getElementById('editBossName').value = boss.name;
+            document.getElementById('editBossLocation').value = boss.location;
+            
+            // 고정보스 여부에 따른 UI 처리
+            const isFixedBoss = boss.fixed || false;
+            document.getElementById('editIsFixedBoss').checked = isFixedBoss;
+            
+            if (isFixedBoss) {
+                document.getElementById('editFixedBossOptions').style.display = 'block';
+                document.getElementById('editNormalBossOptions').style.display = 'none';
+                
+                // 요일 체크박스 설정
+                const days = boss.fixedDays || [];
+                for (let i = 0; i < 7; i++) {
+                    document.getElementById(`editDay${i}`).checked = days.includes(i);
+                }
+                
+                // 시간 설정
+                document.getElementById('editFixedHour').value = boss.fixedHour || '';
+                document.getElementById('editFixedMinute').value = boss.fixedMinute || '';
+            } else {
+                document.getElementById('editFixedBossOptions').style.display = 'none';
+                document.getElementById('editNormalBossOptions').style.display = 'block';
+                
+                // 일반 리젠 시간 설정
+                document.getElementById('editRespawnHours').value = Math.floor(boss.respawnTime / 60);
+                document.getElementById('editRespawnMinutes').value = boss.respawnTime % 60;
+            }
+            
+            document.getElementById('editBossModal').style.display = 'block';
+            document.getElementById('editBossName').focus();
+        }
+
+        // 고정보스 체크박스 이벤트 처리
+        document.getElementById('editIsFixedBoss').addEventListener('change', function(e) {
+            const isFixed = e.target.checked;
+            document.getElementById('editFixedBossOptions').style.display = isFixed ? 'block' : 'none';
+            document.getElementById('editNormalBossOptions').style.display = isFixed ? 'none' : 'block';
+        });
+
+        function saveEditBoss() {
+            if (!currentEditingBoss) return;
+            
+            const isFixed = document.getElementById('editIsFixedBoss').checked;
+            let updatedBoss = {
+                ...currentEditingBoss,
+                name: document.getElementById('editBossName').value.trim(),
+                location: document.getElementById('editBossLocation').value.trim() || '미설정',
+                fixed: isFixed
+            };
+            
+            if (!updatedBoss.name) {
+                showNotification('보스 이름을 입력해주세요.');
+                return;
+            }
+            
+            if (isFixed) {
+                // 선택된 요일 배열 생성
+                const selectedDays = [];
+                for (let i = 0; i < 7; i++) {
+                    if (document.getElementById(`editDay${i}`).checked) {
+                        selectedDays.push(i);
+                    }
+                }
+                
+                if (selectedDays.length === 0) {
+                    showNotification('최소 하나의 요일을 선택해주세요.');
+                    return;
+                }
+                
+                const fixedHour = parseInt(document.getElementById('editFixedHour').value);
+                const fixedMinute = parseInt(document.getElementById('editFixedMinute').value);
+                
+                if (isNaN(fixedHour) || isNaN(fixedMinute) || 
+                    fixedHour < 0 || fixedHour > 23 || 
+                    fixedMinute < 0 || fixedMinute > 59) {
+                    showNotification('올바른 시간을 입력해주세요.');
+                    return;
+                }
+                
+                updatedBoss = {
+                    ...updatedBoss,
+                    fixedDays: selectedDays,
+                    fixedHour: fixedHour,
+                    fixedMinute: fixedMinute,
+                    respawnTime: 0  // 고정보스는 respawnTime 사용 안 함
+                };
+            } else {
+                const hours = parseInt(document.getElementById('editRespawnHours').value) || 0;
+                const minutes = parseInt(document.getElementById('editRespawnMinutes').value) || 0;
+                const totalMinutes = hours * 60 + minutes;
+                
+                if (totalMinutes === 0) {
+                    showNotification('리젠 시간을 입력해주세요.');
+                    return;
+                }
+                
+                updatedBoss = {
+                    ...updatedBoss,
+                    respawnTime: totalMinutes,
+                    fixedDays: null,
+                    fixedHour: null,
+                    fixedMinute: null
+                };
+            }
+            
+            // Firebase에 업데이트
+            bossTimersRef.child(currentEditingBoss.id.toString()).update(updatedBoss)
+                .then(() => {
+                    closeEditModal();
+                    showNotification(`${updatedBoss.name} 정보가 수정되었습니다!`);
+                })
+                .catch((error) => {
+                    console.error('보스 수정 실패:', error);
+                    showNotification('수정에 실패했습니다.');
+                });
+        }
+
+        function closeEditModal() {
+            document.getElementById('editBossModal').style.display = 'none';
+            document.getElementById('editFixedBossOptions').style.display = 'none';
+            document.getElementById('editNormalBossOptions').style.display = 'block';
+            document.getElementById('editIsFixedBoss').checked = false;
+            currentEditingBoss = null;
+            
+            // 입력 필드 초기화
+            document.getElementById('editBossName').value = '';
+            document.getElementById('editBossLocation').value = '';
+            document.getElementById('editRespawnHours').value = '';
+            document.getElementById('editRespawnMinutes').value = '';
+            document.getElementById('editFixedHour').value = '';
+            document.getElementById('editFixedMinute').value = '';
+            
+            // 요일 체크박스 초기화
+            for (let i = 0; i < 7; i++) {
+                document.getElementById(`editDay${i}`).checked = false;
+            }
+        }
+
+        // 전체 보스 리젠
+        function reviveAllBosses() {
+            if (!isLoggedIn) {
+                showNotification('관리자만 전체 리젠할 수 있습니다.');
+                return;
+            }
+            
+            // 고정보스를 제외한 사망 상태의 보스만 필터링
+            const deadBosses = bosses.filter(boss => boss.status === 'dead' && !boss.fixed);
+            
+            if (deadBosses.length === 0) {
+                showNotification('리젠할 보스가 없습니다.');
+                return;
+            }
+            
+            if (confirm(`${deadBosses.length}마리의 보스를 모두 리젠하시겠습니까?\n\n⚠️ 서버 점검 후 사용 - 모든 컷 시간이 초기화됩니다!`)) {
+                // Firebase 배치 업데이트를 위한 객체 준비 (모든 보스 컷 시간 초기화)
+                const updates = {};
+                
+                deadBosses.forEach(boss => {
+                    updates[`${boss.id}/status`] = 'alive';
+                    // 전체 리젠 시 모든 보스의 컷 시간 초기화 (서버 점검 후 새로 시작)
+                    updates[`${boss.id}/lastKilled`] = null;
+                    updates[`${boss.id}/nextRespawn`] = null;
+                    updates[`${boss.id}/unregistered`] = false;
+                    updates[`${boss.id}/autoProcessed`] = false;
+                });
+                
+                // 배치 업데이트 실행
+                bossTimersRef.update(updates)
+                    .then(() => {
+                        playRespawnSound(); // 전체 리젠 사운드 재생
+                        showNotification(`${deadBosses.length}마리의 보스가 모두 리젠되었습니다!`);
+                    })
+                    .catch((error) => {
+                        console.error('전체 리젠 실패:', error);
+                        showNotification('전체 리젠에 실패했습니다.');
+                    });
+            }
+        }
+
+        // 빠른 처치 기능
+        function processQuickKill() {
+            console.log('processQuickKill 함수 실행됨');
+            const input = document.getElementById('quickKillInput');
+            const inputText = input.value.trim();
+            
+            console.log('입력된 텍스트:', inputText);
+            
+            if (!inputText) {
+                showNotification('보스 이름을 입력해주세요.');
+                return;
+            }
+            
+            // "ㅋ" 또는 "컷" 키워드 확인
+            const killKeywords = ['ㅋ', '컷'];
+            let bossName = '';
+            let isKillCommand = false;
+            
+            for (const keyword of killKeywords) {
+                if (inputText.includes(keyword)) {
+                    bossName = inputText.replace(keyword, '').trim();
+                    isKillCommand = true;
+                    console.log('키워드 발견:', keyword, '보스명:', bossName);
+                    break;
+                }
+            }
+            
+            if (!isKillCommand) {
+                console.log('키워드 없음');
+                showNotification('처치 명령어(ㅋ 또는 컷)를 입력해주세요.');
+                return;
+            }
+            
+            if (!bossName) {
+                console.log('보스명 없음');
+                showNotification('보스 이름을 입력해주세요.');
+                return;
+            }
+            
+            console.log('현재 보스 목록:', bosses);
+            
+            // 보스 이름으로 검색 (부분 일치 허용)
+            const matchedBoss = bosses.find(boss => 
+                boss.name.toLowerCase().includes(bossName.toLowerCase()) || 
+                bossName.toLowerCase().includes(boss.name.toLowerCase())
+            );
+            
+            console.log('매칭된 보스:', matchedBoss);
+            
+            if (!matchedBoss) {
+                showNotification(`"${bossName}" 보스를 찾을 수 없습니다.`);
+                return;
+            }
+            
+            if (matchedBoss.status === 'dead') {
+                // 이미 처치된 보스인 경우 자동으로 리젠 후 다시 처치
+                console.log('이미 처치된 보스 - 자동 리젠 후 처치:', matchedBoss.name);
+                
+                // 먼저 리젠 처리 (미등록 상태는 보존)
+                const revivedBoss = {
+                    ...matchedBoss,
+                    status: 'alive',
+                    lastKilled: null,
+                    nextRespawn: null,
+                    // unregistered는 기존 상태 유지
+                    autoProcessed: false
+                };
+                
+                // Firebase에서 리젠 후 즉시 처치
+                bossTimersRef.child(matchedBoss.id.toString()).update(revivedBoss)
+                    .then(() => {
+                        console.log('리젠 완료, 처치 진행');
+                        playRespawnSound(); // 빠른 처치 리젠 사운드 재생
+                        // 리젠 후 즉시 처치
+                        const now = new Date();
+                        const killedBoss = {
+                            ...revivedBoss,
+                            status: 'dead',
+                            lastKilled: now.toISOString(),
+                            nextRespawn: new Date(now.getTime() + matchedBoss.respawnTime * 60000).toISOString(),
+                            unregistered: false, // 빠른처치 시 무조건 미등록 해제
+                            autoProcessed: true
+                        };
+                        
+                        return bossTimersRef.child(matchedBoss.id.toString()).update(killedBoss);
+                    })
+                    .then(() => {
+                        const respawnHours = Math.floor(matchedBoss.respawnTime / 60);
+                        const respawnMins = matchedBoss.respawnTime % 60;
+                        const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
+                        
+                        playKillSound(); // 빠간 처치 사운드 재생
+                        showNotification(`${matchedBoss.name}을(를) 리젠 후 다시 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
+                    })
+                    .catch((error) => {
+                        console.error('리젠 후 처치 실패:', error);
+                        showNotification('처리 중 오류가 발생했습니다.');
+                    });
+                
+                // 입력 필드 초기화
+                input.value = '';
+                input.blur();
+                return;
+            }
+            
+            console.log('보스 처치 실행:', matchedBoss.name);
+            
+            // 보스 처치 실행
+            killBoss(matchedBoss.id);
+            
+            // 입력 필드 초기화
+            input.value = '';
+            input.blur();
         }
 
         // 통계 업데이트
@@ -1101,104 +2300,117 @@
             }, 3000);
         }
 
-        // 보스 수정 모달 관련 함수들
-        function showEditModal(bossId) {
-            const boss = bosses.find(b => b.id === bossId);
-            if (!boss) return;
+        // 사운드 토글 함수
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('soundEnabled', soundEnabled.toString());
+            updateSoundButton();
             
-            currentEditingBoss = boss;
-            
-            // 모달에 현재 보스 정보 채우기
-            document.getElementById('editBossName').value = boss.name;
-            document.getElementById('editRespawnHours').value = Math.floor(boss.respawnTime / 60);
-            document.getElementById('editRespawnMinutes').value = boss.respawnTime % 60;
-            document.getElementById('editBossLocation').value = boss.location;
-            
-            document.getElementById('editBossModal').style.display = 'block';
-            document.getElementById('editBossName').focus();
+            if (soundEnabled) {
+                showNotification('🔊 사운드가 활성화되었습니다');
+                // 테스트 사운드 재생
+                playRespawnSound();
+            } else {
+                showNotification('🔇 사운드가 비활성화되었습니다');
+            }
         }
 
-        function closeEditModal() {
-            document.getElementById('editBossModal').style.display = 'none';
-            currentEditingBoss = null;
-            // 입력 필드 초기화
-            document.getElementById('editBossName').value = '';
-            document.getElementById('editRespawnHours').value = '';
-            document.getElementById('editRespawnMinutes').value = '';
-            document.getElementById('editBossLocation').value = '';
+        // 사운드 버튼 업데이트
+        function updateSoundButton() {
+            const soundButton = document.getElementById('soundToggle');
+            if (soundButton) {
+                soundButton.textContent = soundEnabled ? '🔊' : '🔇';
+                soundButton.title = soundEnabled ? '사운드 끄기' : '사운드 켜기';
+            }
         }
 
-        function saveEditBoss() {
-            if (!currentEditingBoss) return;
+        function setBossFilter(filter) {
+            bossFilter = filter;
+            renderBossesUI();
+            // 선택 효과
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('selected'));
+            if (filter === 'all') document.getElementById('statTotal').classList.add('selected');
+            if (filter === 'alive') document.getElementById('statAlive').classList.add('selected');
+            if (filter === 'dead') document.getElementById('statDead').classList.add('selected');
+            if (filter === 'soon') document.getElementById('statSoon').classList.add('selected');
+        }
+
+        // 고정보스 등록 폼 제출 처리
+        document.getElementById('fixedBossForm').addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            const hours = parseInt(document.getElementById('editRespawnHours').value) || 0;
-            const minutes = parseInt(document.getElementById('editRespawnMinutes').value) || 0;
-            const totalMinutes = hours * 60 + minutes;
-            
-            if (totalMinutes === 0) {
-                showNotification('리젠 시간을 입력해주세요.');
+            if (!isLoggedIn) {
+                showNotification('관리자만 보스를 등록할 수 있습니다.');
                 return;
             }
             
-            const updatedBoss = {
-                ...currentEditingBoss,
-                name: document.getElementById('editBossName').value.trim(),
-                respawnTime: totalMinutes,
-                location: document.getElementById('editBossLocation').value.trim() || '미설정'
-            };
+            const name = document.getElementById('fixedBossName').value.trim();
+            const location = document.getElementById('fixedLocation').value.trim() || '미설정';
+            const hour = parseInt(document.getElementById('fixedHour').value);
+            const minute = parseInt(document.getElementById('fixedMinute').value);
             
-            if (!updatedBoss.name) {
+            // 선택된 요일 배열 생성
+            const selectedDays = [];
+            for (let i = 0; i < 7; i++) {
+                if (document.getElementById(`fixedDay${i}`).checked) {
+                    selectedDays.push(i);
+                }
+            }
+            
+            if (!name) {
                 showNotification('보스 이름을 입력해주세요.');
                 return;
             }
             
-            // Firebase에 업데이트
-            bossTimersRef.child(currentEditingBoss.id.toString()).update(updatedBoss)
+            if (selectedDays.length === 0) {
+                showNotification('최소 하나의 요일을 선택해주세요.');
+                return;
+            }
+            
+            if (isNaN(hour) || isNaN(minute) || 
+                hour < 0 || hour > 23 || 
+                minute < 0 || minute > 59) {
+                showNotification('올바른 시간을 입력해주세요.');
+                return;
+            }
+            
+            // 새 보스 데이터 생성
+            const newBoss = {
+                id: Date.now(),
+                name: name,
+                location: location,
+                fixed: true,
+                fixedDays: selectedDays,
+                fixedHour: hour,
+                fixedMinute: minute,
+                status: 'dead',  // 초기 상태를 dead로 변경
+                lastKilled: null,
+                nextRespawn: null,
+                respawnTime: 0,
+                autoProcessed: false,  // autoProcessed 추가
+                unregistered: false    // unregistered 추가
+            };
+            
+            // Firebase에 저장
+            bossTimersRef.child(newBoss.id.toString()).set(newBoss)
                 .then(() => {
-                    closeEditModal();
-                    showNotification(`${updatedBoss.name} 정보가 수정되었습니다!`);
+                    // 폼 초기화
+                    document.getElementById('fixedBossName').value = '';
+                    document.getElementById('fixedLocation').value = '';
+                    document.getElementById('fixedHour').value = '0';
+                    document.getElementById('fixedMinute').value = '0';
+                    // 요일 체크박스 초기화
+                    for (let i = 0; i < 7; i++) {
+                        document.getElementById(`fixedDay${i}`).checked = false;
+                    }
+                    
+                    showNotification(`${name} 보스가 등록되었습니다!`);
                 })
                 .catch((error) => {
-                    console.error('보스 수정 실패:', error);
-                    showNotification('수정에 실패했습니다.');
+                    console.error('보스 등록 실패:', error);
+                    showNotification('보스 등록에 실패했습니다.');
                 });
-        }
-
-        // 전체 보스 리젠
-        function reviveAllBosses() {
-            if (!isLoggedIn) {
-                showNotification('관리자만 전체 리젠할 수 있습니다.');
-                return;
-            }
-            
-            const deadBosses = bosses.filter(boss => boss.status === 'dead');
-            
-            if (deadBosses.length === 0) {
-                showNotification('리젠할 보스가 없습니다.');
-                return;
-            }
-            
-            if (confirm(`${deadBosses.length}마리의 보스를 모두 리젠하시겠습니까?\n(서버 점검 후 사용)`)) {
-                // Firebase 배치 업데이트를 위한 객체 준비
-                const updates = {};
-                
-                deadBosses.forEach(boss => {
-                    updates[`${boss.id}/status`] = 'alive';
-                    updates[`${boss.id}/lastKilled`] = null;
-                    updates[`${boss.id}/nextRespawn`] = null;
-                });
-                
-                // 배치 업데이트 실행
-                bossTimersRef.update(updates)
-                    .then(() => {
-                        showNotification(`${deadBosses.length}마리의 보스가 모두 리젠되었습니다!`);
-                    })
-                    .catch((error) => {
-                        console.error('전체 리젠 실패:', error);
-                        showNotification('전체 리젠에 실패했습니다.');
-                    });
-            }
-        }
+        });
     </script>
 </body>
 </html> 
