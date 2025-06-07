@@ -2376,6 +2376,30 @@
             }, 3000);
         }
 
+        // 사운드 토글 함수
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('soundEnabled', soundEnabled.toString());
+            updateSoundButton();
+            
+            if (soundEnabled) {
+                showNotification('🔊 사운드가 활성화되었습니다');
+                // 테스트 사운드 재생
+                playRespawnSound();
+            } else {
+                showNotification('🔇 사운드가 비활성화되었습니다');
+            }
+        }
+
+        // 사운드 버튼 업데이트
+        function updateSoundButton() {
+            const soundButton = document.getElementById('soundToggle');
+            if (soundButton) {
+                soundButton.textContent = soundEnabled ? '🔊' : '🔇';
+                soundButton.title = soundEnabled ? '사운드 끄기' : '사운드 켜기';
+            }
+        }
+
         function setBossFilter(filter) {
             bossFilter = filter;
             renderBossesUI();
