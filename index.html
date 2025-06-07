@@ -1685,7 +1685,7 @@
             bossTimersRef.child(id.toString()).update(updatedBoss)
                 .then(() => {
                     speak(`${boss.name} 보스를 처치했습니다!`); // TTS 사용
-                    showNotification(`${boss.name}을(를) 처치했습니다! ${formatTime(boss.respawnTime)} 후 리젠됩니다.`);
+                    showNotification(`${boss.name} 보스를 처치했습니다!`);
                 })
                 .catch((error) => {
                     console.error('보스 처치 업데이트 실패:', error);
@@ -1710,7 +1710,7 @@
                 .then(() => {
                     speak(`${boss.name} 보스가 리젠되었습니다!`); // TTS 사용
                     const statusText = boss.unregistered ? '(미등록 상태 유지)' : '';
-                    showNotification(`${boss.name}이(가) 리젠되었습니다! ${statusText}`);
+                    showNotification(`${boss.name} 보스가 리젠되었습니다!`);
                 })
                 .catch((error) => {
                     console.error('보스 리젠 업데이트 실패:', error);
@@ -2039,7 +2039,7 @@
             bossTimersRef.child(currentEditingBoss.id.toString()).update(updatedBoss)
                 .then(() => {
                     closeEditModal();
-                    showNotification(`${updatedBoss.name} 정보가 수정되었습니다!`);
+                    showNotification(`${updatedBoss.name} 보스 정보가 수정되었습니다!`);
                 })
                 .catch((error) => {
                     console.error('보스 수정 실패:', error);
@@ -2298,7 +2298,7 @@
                             '현재 시간';
                         
                         speak(`${matchedBoss.name} 보스를 처치했습니다!`); // TTS 사용
-                        showNotification(`${matchedBoss.name}을(를) ${timeText} 기준으로 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
+                        showNotification(`${matchedBoss.name} 보스를 처치했습니다!`);
                     })
                     .catch((error) => {
                         console.error('리젠 후 처치 실패:', error);
@@ -2330,7 +2330,7 @@
                         `${customTime.getHours().toString().padStart(2, '0')}:${customTime.getMinutes().toString().padStart(2, '0')}:${customTime.getSeconds().toString().padStart(2, '0')}` : 
                         '현재 시간';
                     speak(`${matchedBoss.name} 보스를 처치했습니다!`); // TTS 사용
-                    showNotification(`${matchedBoss.name}을(를) ${timeText} 기준으로 처치했습니다! ${formatTime(matchedBoss.respawnTime * 60000)} 후 리젠됩니다.`);
+                    showNotification(`${matchedBoss.name} 보스를 처치했습니다!`);
                 })
                 .catch((error) => {
                     console.error('보스 처치 업데이트 실패:', error);
@@ -2374,30 +2374,6 @@
                 notification.classList.remove('show');
                 setTimeout(() => document.body.removeChild(notification), 300);
             }, 3000);
-        }
-
-        // 사운드 토글 함수
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            localStorage.setItem('soundEnabled', soundEnabled.toString());
-            updateSoundButton();
-            
-            if (soundEnabled) {
-                showNotification('🔊 사운드가 활성화되었습니다');
-                // 테스트 사운드 재생
-                playRespawnSound();
-            } else {
-                showNotification('🔇 사운드가 비활성화되었습니다');
-            }
-        }
-
-        // 사운드 버튼 업데이트
-        function updateSoundButton() {
-            const soundButton = document.getElementById('soundToggle');
-            if (soundButton) {
-                soundButton.textContent = soundEnabled ? '🔊' : '🔇';
-                soundButton.title = soundEnabled ? '사운드 끄기' : '사운드 켜기';
-            }
         }
 
         function setBossFilter(filter) {
