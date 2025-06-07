@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머 Ver1.2</title>
+    <title>게임 보스 리젠 타이머 Ver1.3</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -768,7 +768,7 @@
                 <!-- 로그인 상태 표시 영역 -->
             </div>
 
-            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.2</h1>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.3</h1>
             <p>보스 몬스터의 리젠 시간을 추적하고 관리하세요</p>
         </div>
 
@@ -907,54 +907,38 @@
             <div class="add-boss-form" style="margin-top: 18px;">
                 <h3 style="margin-bottom: 8px; color: #2c3e50;">고정보스 등록</h3>
                 <form id="fixedBossForm">
-                    <div class="form-row" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: nowrap;">
-                        <div class="form-group" style="min-width: 200px; flex-grow: 1;">
+                    <div class="form-row boss-form-row" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: nowrap;">
+                        <div class="form-group" style="min-width: 180px; flex-grow: 1;">
                             <label for="fixedBossName">보스 이름</label>
-                            <input type="text" id="fixedBossName" placeholder="예: 월요보스" required style="width: 100%;">
+                            <input type="text" id="fixedBossName" placeholder="예: 드래곤 킹" required style="width: 100%;">
                         </div>
-                        <div class="form-group" style="min-width: 300px;">
-                            <label>요일 선택</label>
-                            <div class="weekday-selector" style="margin: 0;">
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay0"><label for="fixedDay0">일</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay1"><label for="fixedDay1">월</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay2"><label for="fixedDay2">화</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay3"><label for="fixedDay3">수</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay4"><label for="fixedDay4">목</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay5"><label for="fixedDay5">금</label>
-                                </div>
-                                <div class="weekday-checkbox">
-                                    <input type="checkbox" id="fixedDay6"><label for="fixedDay6">토</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group form-group-hour-minute">
-                            <div style="display: flex; flex-direction: row; gap: 6px; align-items: flex-end; width: 100%;">
-                                <div style="display: flex; flex-direction: column; flex: 1;">
-                                    <label for="fixedHour">시</label>
-                                    <input type="text" id="fixedHour" value="0" style="text-align: center;">
-                                </div>
-                                <div style="display: flex; flex-direction: column; flex: 1;">
-                                    <label for="fixedMinute">분</label>
-                                    <input type="text" id="fixedMinute" value="0" style="text-align: center;">
-                                </div>
+                        <div class="form-group" style="min-width: 120px;">
+                            <label for="fixedRespawnTime">출현 시간</label>
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <input type="text" id="fixedHour" placeholder="0" value="0" style="text-align: center; flex: 1;">
+                                <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
+                                <input type="text" id="fixedMinute" placeholder="0" value="0" style="text-align: center; flex: 1;">
                             </div>
                         </div>
                         <div class="form-group" style="min-width: 160px;">
                             <label for="fixedLocation">위치</label>
-                            <input type="text" id="fixedLocation" placeholder="예: 중앙 광장">
+                            <input type="text" id="fixedLocation" placeholder="예: 화산 던전 3층">
                         </div>
-                        <button type="submit" class="btn" style="min-width: 100px; margin-top: 20px;">고정보스 등록</button>
+                        <button type="submit" class="btn" style="min-width: 100px; margin-top: 20px;">보스 등록</button>
+                    </div>
+                    <div class="form-row" style="margin-top: 8px;">
+                        <div class="form-group" style="min-width: 300px;">
+                            <label>출현 요일</label>
+                            <div class="weekday-selector" style="margin: 0;">
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay0"><label for="fixedDay0">일</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay1"><label for="fixedDay1">월</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay2"><label for="fixedDay2">화</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay3"><label for="fixedDay3">수</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay4"><label for="fixedDay4">목</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay5"><label for="fixedDay5">금</label></div>
+                                <div class="weekday-checkbox"><input type="checkbox" id="fixedDay6"><label for="fixedDay6">토</label></div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -2542,11 +2526,8 @@
             const updates = {};
             updates[`${boss.id}/killTime`] = killTime;
             updates[`${boss.id}/status`] = 'dead';
-            
-            // 음성 안내 먼저 실행
-            console.log('보스 처치 음성 안내 시작');
+            // 사운드 안내를 최우선으로 실행
             speak(`${boss.name} 보스가 처치되었습니다.`);
-
             bossTimersRef.update(updates)
                 .then(() => {
                     console.log('처치 시간 업데이트 완료');
@@ -2562,11 +2543,8 @@
             const updates = {};
             updates[`${boss.id}/killTime`] = null;
             updates[`${boss.id}/status`] = 'alive';
-            
-            // 음성 안내 먼저 실행
-            console.log('보스 리젠 음성 안내 시작');
+            // 사운드 안내를 최우선으로 실행
             speak(`${boss.name} 보스가 리젠되었습니다.`);
-
             bossTimersRef.update(updates)
                 .then(() => {
                     console.log('리젠 처리 완료');
@@ -2579,20 +2557,18 @@
 
         // 자동 업데이트 처리
         function processAutoUpdates(updates, hasRespawns) {
-            // 리젠된 보스들에 대해 TTS 먼저 실행
+            // 리젠된 보스들에 대해 TTS를 최우선으로 실행
             if (hasRespawns) {
                 Object.keys(updates).forEach(key => {
                     if (key.endsWith('/status') && updates[key] === 'alive') {
                         const bossId = key.split('/')[0];
                         const boss = bosses.find(b => b.id.toString() === bossId);
                         if (boss) {
-                            console.log('자동 리젠 음성 안내 시작:', boss.name);
                             speak(`${boss.name} 보스가 리젠되었습니다.`);
                         }
                     }
                 });
             }
-
             bossTimersRef.update(updates)
                 .then(() => {
                     console.log('자동 처리 업데이트 완료');
@@ -2734,14 +2710,12 @@
                 updates[`${boss.id}/killTime`] = null;
                 updates[`${boss.id}/status`] = 'alive';
             }
-            
+            // 사운드 안내를 최우선으로 실행
+            const message = isKill ? `${boss.name} 보스가 처치되었습니다.` : `${boss.name} 보스가 리젠되었습니다.`;
+            speak(message);
             bossTimersRef.update(updates)
                 .then(() => {
-                    const message = isKill ? 
-                        `${boss.name} 보스가 처치되었습니다.` : 
-                        `${boss.name} 보스가 리젠되었습니다.`;
                     console.log(isKill ? '처치 시간 업데이트 완료' : '리젠 처리 완료');
-                    speak(message);
                 })
                 .catch(error => {
                     console.error(isKill ? '처치 시간 업데이트 실패' : '리젠 처리 실패', error);
@@ -2750,4 +2724,5 @@
         }
     </script>
 </body>
+</html> 
 </html> 
