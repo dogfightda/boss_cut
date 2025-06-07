@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머 Ver1.0</title>
+    <title>게임 보스 리젠 타이머 Ver1.1</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -551,7 +551,7 @@
             height: 30px;
             display: flex;
             align-items: center;
-            justify-content: center;
+                justify-content: center;
             border-radius: 50%;
             transition: all 0.3s;
         }
@@ -629,8 +629,8 @@
             display: flex;
             gap: 8px;
             margin: 8px 0;
-            flex-wrap: wrap;
-        }
+                flex-wrap: wrap;
+            }
 
         .weekday-checkbox {
             display: flex;
@@ -678,7 +678,7 @@
             <div style="position: absolute; top: 8px; left: 12px;">
                 <button id="soundToggle" onclick="toggleSound()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px; border-radius: 4px; background: rgba(255,255,255,0.2); transition: all 0.2s;" title="사운드 켜기/끄기">🔊</button>
             </div>
-            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.0</h1>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.1</h1>
             <p>보스 몬스터의 리젠 시간을 추적하고 관리하세요</p>
         </div>
 
@@ -794,21 +794,21 @@
                 <form id="bossForm">
                     <div class="form-row boss-form-row" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: nowrap;">
                         <div class="form-group" style="min-width: 180px; flex-grow: 1;">
-                            <label for="bossName">보스 이름</label>
+                        <label for="bossName">보스 이름</label>
                             <input type="text" id="bossName" placeholder="예: 드래곤 킹" required style="width: 100%;">
-                        </div>
+                    </div>
                         <div class="form-group" style="min-width: 120px;">
                             <label for="respawnTime">리젠 시간</label>
                             <div style="display: flex; gap: 5px; align-items: center;">
                                 <input type="number" id="respawnHours" placeholder="0" min="0" max="23" value="0" style="text-align: center; flex: 1;">
                                 <span style="font-size: 0.9rem; color: #7f8c8d;">:</span>
                                 <input type="number" id="respawnMinutes" placeholder="0" min="0" max="59" value="0" style="text-align: center; flex: 1;">
-                            </div>
+                    </div>
                         </div>
                         <div class="form-group" style="min-width: 160px;">
-                            <label for="bossLocation">위치</label>
-                            <input type="text" id="bossLocation" placeholder="예: 화산 던전 3층">
-                        </div>
+                        <label for="bossLocation">위치</label>
+                        <input type="text" id="bossLocation" placeholder="예: 화산 던전 3층">
+                    </div>
                         <button type="submit" class="btn" style="min-width: 100px; margin-top: 20px;">보스 추가</button>
                     </div>
                 </form>
@@ -887,7 +887,9 @@
                     <button type="button" class="btn btn-small" onclick="processQuickKill()">입력</button>
                 </div>
                 <small style="color: #7f8c8d; font-size: 0.75rem; display: block; margin-top: 4px;">
-                    💡 "보스이름 ㅋ" 또는 "보스이름 컷" 형태로 입력하세요
+                    💡 "보스이름 ㅋ" 또는 "[시간] 보스이름 ㅋ" 형태로 입력하세요<br>
+                    ⏰ 시간 형식: HHMMSS 또는 HHMM (예: 235959 또는 2359)<br>
+                    📝 보스 이름은 앞 2글자 이상 입력 (하드보스는 반드시 '하드'로 끝나야 함)
                 </small>
             </div>
         </div>
@@ -941,6 +943,19 @@
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
             bossTimersRef = db.ref('bossTimers');
+            
+            // Firebase 데이터 로드 및 실시간 업데이트 설정
+            bossTimersRef.on('value', (snapshot) => {
+                bosses = Object.keys(snapshot.val() || {}).map(key => ({
+                    id: parseInt(key),
+                    ...snapshot.val()[key]
+                }));
+                console.log('Firebase에서 보스 데이터 로드됨:', bosses.length, '개');
+                renderBosses();
+            }, (error) => {
+                console.error('Firebase 데이터 로드 실패:', error);
+            });
+            
             console.log('Firebase 초기화 완료');
         } catch (error) {
             console.error('Firebase 초기화 실패:', error);
@@ -1607,10 +1622,10 @@
                         statusClass = 'respawn-soon';
                         statusText = '곧 리젠';
                     } else if (diff <= 0) {
-                        statusClass = 'alive';
-                        statusText = '생존';
+                    statusClass = 'alive';
+                    statusText = '생존';
                         timerDisplay = '대기 중';
-                    } else {
+                } else {
                         statusClass = 'dead';
                         statusText = '사망';
                     }
@@ -1631,7 +1646,7 @@
                     if (timeDiff > 0) {
                         // 리젠까지 남은 시간 (미등록이면 미등록 붙임)
                         statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead';
-                        statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
+                    statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
                         timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
                     } else {
                         // 리젠 완료 후 대기중
@@ -1668,16 +1683,16 @@
                         <div class="boss-name">${boss.name}
                             ${boss.fixed ? '<span style=\"background:#3b4cca;color:#fff;font-size:0.7em;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;\">고정</span>' : ''}
                         </div>
-                        <div class="boss-details">
-                            <span>📍 ${boss.location}</span>
+                            <div class="boss-details">
+                                <span>📍 ${boss.location}</span>
                             ${timeDisplay}
                             ${lastKilledDisplay}
+                            </div>
                         </div>
-                    </div>
                     <div class="boss-right">
                         <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''} ${isUnregistered ? 'unregistered' : ''}" id="timer-${boss.id}">
                             ${timerDisplay}
-                    </div>
+                        </div>
                     <div class="boss-actions">
                         ${(boss.fixed && statusClass === 'dead') || boss.status === 'dead' ? 
                             `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>` :
@@ -2153,6 +2168,12 @@
 
         // 빠른 처치 기능
         function processQuickKill() {
+            if (!bosses || !Array.isArray(bosses)) {
+                console.error('보스 데이터가 아직 로드되지 않았습니다.');
+                showNotification('보스 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            
             console.log('processQuickKill 함수 실행됨');
             const input = document.getElementById('quickKillInput');
             const inputText = input.value.trim();
@@ -2168,24 +2189,77 @@
             const killKeywords = ['ㅋ', '컷'];
             let bossName = '';
             let isKillCommand = false;
+            let customTime = null;
             
+            // 시간 패턴 확인 (HHMMSS 또는 HHMM 형식)
+            const timePattern = /^(\d{6}|\d{4})\s+/;
+            const timeMatch = inputText.match(timePattern);
+            let remainingText = inputText;
+            
+            if (timeMatch) {
+                const timeStr = timeMatch[1];
+                const now = new Date();
+                customTime = new Date();
+                
+                // 시간 부분을 제외한 나머지 텍스트 추출
+                remainingText = inputText.substring(timeMatch[0].length);
+                
+                if (timeStr.length === 6) {
+                    // HHMMSS 형식
+                    const hours = parseInt(timeStr.substring(0, 2));
+                    const minutes = parseInt(timeStr.substring(2, 4));
+                    const seconds = parseInt(timeStr.substring(4, 6));
+                    
+                    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59 && seconds >= 0 && seconds <= 59) {
+                        customTime.setHours(hours, minutes, seconds, 0);
+                    } else {
+                        showNotification('올바른 시간 형식이 아닙니다. (HHMMSS)');
+                        return;
+                    }
+                } else if (timeStr.length === 4) {
+                    // HHMM 형식
+                    const hours = parseInt(timeStr.substring(0, 2));
+                    const minutes = parseInt(timeStr.substring(2, 4));
+                    
+                    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+                        customTime.setHours(hours, minutes, 0, 0);
+                    } else {
+                        showNotification('올바른 시간 형식이 아닙니다. (HHMM)');
+                        return;
+                    }
+                }
+
+                // 입력된 시간이 현재 시간보다 최대 24시간 이상 이전인 경우 에러
+                const timeDiff = now - customTime;
+                if (timeDiff < 0) {
+                    showNotification('미래 시간은 입력할 수 없습니다.');
+                    return;
+                }
+                if (timeDiff > 24 * 60 * 60 * 1000) {
+                    showNotification('24시간 이상 이전의 시간은 입력할 수 없습니다.');
+                    return;
+                }
+                
+                console.log('입력된 시간:', timeStr);
+                console.log('변환된 시간:', customTime.toLocaleString());
+                console.log('현재 시간:', now.toLocaleString());
+            }
+            
+            // "ㅋ" 또는 "컷" 키워드로 보스 이름 추출
             for (const keyword of killKeywords) {
-                if (inputText.includes(keyword)) {
-                    bossName = inputText.replace(keyword, '').trim();
+                if (remainingText.includes(keyword)) {
                     isKillCommand = true;
-                    console.log('키워드 발견:', keyword, '보스명:', bossName);
+                    bossName = remainingText.split(keyword)[0].trim();
                     break;
                 }
             }
             
             if (!isKillCommand) {
-                console.log('키워드 없음');
-                showNotification('처치 명령어(ㅋ 또는 컷)를 입력해주세요.');
+                showNotification('처치 명령어를 찾을 수 없습니다. "ㅋ" 또는 "컷"을 입력해주세요.');
                 return;
             }
             
             if (!bossName) {
-                console.log('보스명 없음');
                 showNotification('보스 이름을 입력해주세요.');
                 return;
             }
@@ -2193,29 +2267,64 @@
             console.log('현재 보스 목록:', bosses);
             
             // 보스 이름으로 검색 (부분 일치 허용)
-            const matchedBoss = bosses.find(boss => 
-                boss.name.toLowerCase().includes(bossName.toLowerCase()) || 
-                bossName.toLowerCase().includes(boss.name.toLowerCase())
-            );
-            
-            console.log('매칭된 보스:', matchedBoss);
-            
-            if (!matchedBoss) {
-                showNotification(`"${bossName}" 보스를 찾을 수 없습니다.`);
+            let matchingBosses = bosses.filter(boss => {
+                if (!boss || !boss.name) return false;
+                
+                const searchName = bossName.toLowerCase().trim();
+                const targetName = boss.name.toLowerCase().trim();
+                console.log(`비교: 입력='${searchName}', 보스='${targetName}'`);
+                
+                // 정확한 일치
+                if (targetName === searchName) return true;
+                
+                // 입력된 이름이 '하드'로 끝나는 경우 (예: "케르하드")
+                if (searchName.endsWith('하드')) {
+                    // 대상 보스가 하드보스가 아니면 매칭 안함
+                    if (!targetName.endsWith('하드')) return false;
+                    
+                    // 하드를 제외한 부분이 보스 이름의 시작 부분과 일치하는지 확인
+                    const searchBase = searchName.slice(0, -2); // "하드" 제외
+                    const targetBase = targetName.slice(0, -2); // "하드" 제외
+                    return targetBase.startsWith(searchBase) && searchBase.length >= 2;
+                }
+                
+                // 입력된 이름이 '하드'로 끝나지 않는 경우 (일반 보스 검색)
+                if (!searchName.endsWith('하드')) {
+                    // 하드보스는 매칭에서 제외
+                    if (targetName.endsWith('하드')) return false;
+                    
+                    // 일반 보스의 경우 시작 부분 매칭 허용 (최소 2글자)
+                    return targetName.startsWith(searchName) && searchName.length >= 2;
+                }
+                
+                return false;
+            });
+
+            // 매칭된 보스가 여러 개인 경우 처리
+            if (matchingBosses.length > 1) {
+                const matchedNames = matchingBosses.map(b => b.name).join(', ');
+                showNotification(`"${bossName}"와(과) 일치하는 보스가 여러 개 있습니다 (${matchedNames}). 더 정확한 이름을 입력해주세요.`);
                 return;
             }
             
+            // 매칭된 보스가 없는 경우
+            if (matchingBosses.length === 0) {
+                showNotification(`"${bossName}" 보스를 찾을 수 없습니다.`);
+                return;
+            }
+
+            const matchedBoss = matchingBosses[0];
+            console.log('매칭된 보스:', matchedBoss);
+            
+            // 보스가 이미 dead 상태인 경우
             if (matchedBoss.status === 'dead') {
-                // 이미 처치된 보스인 경우 자동으로 리젠 후 다시 처치
-                console.log('이미 처치된 보스 - 자동 리젠 후 처치:', matchedBoss.name);
-                
+                console.log('사망 상태 보스 처리 시작');
                 // 먼저 리젠 처리 (미등록 상태는 보존)
                 const revivedBoss = {
                     ...matchedBoss,
                     status: 'alive',
                     lastKilled: null,
                     nextRespawn: null,
-                    // unregistered는 기존 상태 유지
                     autoProcessed: false
                 };
                 
@@ -2225,14 +2334,14 @@
                         console.log('리젠 완료, 처치 진행');
                         playRespawnSound(); // 빠른 처치 리젠 사운드 재생
                         // 리젠 후 즉시 처치
-                        const now = new Date();
+                        const killTime = customTime || new Date();
                         const killedBoss = {
                             ...revivedBoss,
                             status: 'dead',
-                            lastKilled: now.toISOString(),
-                            nextRespawn: new Date(now.getTime() + matchedBoss.respawnTime * 60000).toISOString(),
-                            unregistered: false, // 빠른처치 시 무조건 미등록 해제
-                            autoProcessed: true
+                            lastKilled: killTime.toISOString(),
+                            nextRespawn: new Date(killTime.getTime() + matchedBoss.respawnTime * 60000).toISOString(),
+                            unregistered: false,
+                            autoProcessed: false  // 수동 처치로 처리
                         };
                         
                         return bossTimersRef.child(matchedBoss.id.toString()).update(killedBoss);
@@ -2241,9 +2350,12 @@
                         const respawnHours = Math.floor(matchedBoss.respawnTime / 60);
                         const respawnMins = matchedBoss.respawnTime % 60;
                         const respawnTimeText = respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`;
+                        const timeText = customTime ? 
+                            `${customTime.getHours().toString().padStart(2, '0')}:${customTime.getMinutes().toString().padStart(2, '0')}:${customTime.getSeconds().toString().padStart(2, '0')}` : 
+                            '현재 시간';
                         
-                        playKillSound(); // 빠간 처치 사운드 재생
-                        showNotification(`${matchedBoss.name}을(를) 리젠 후 다시 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
+                        playKillSound(); // 처치 사운드 재생
+                        showNotification(`${matchedBoss.name}을(를) ${timeText} 기준으로 처치했습니다! ${respawnTimeText} 후 리젠됩니다.`);
                     })
                     .catch((error) => {
                         console.error('리젠 후 처치 실패:', error);
@@ -2258,8 +2370,29 @@
             
             console.log('보스 처치 실행:', matchedBoss.name);
             
-            // 보스 처치 실행
-            killBoss(matchedBoss.id);
+            // 보스 처치 실행 (시간 지정 처치)
+            const now = customTime || new Date();
+            const updatedBoss = {
+                ...matchedBoss,
+                status: 'dead',
+                lastKilled: now.toISOString(),
+                nextRespawn: new Date(now.getTime() + matchedBoss.respawnTime * 60000).toISOString(),
+                unregistered: false,
+                autoProcessed: false  // 수동 처치로 처리
+            };
+            
+            bossTimersRef.child(matchedBoss.id.toString()).update(updatedBoss)
+                .then(() => {
+                    const timeText = customTime ? 
+                        `${customTime.getHours().toString().padStart(2, '0')}:${customTime.getMinutes().toString().padStart(2, '0')}:${customTime.getSeconds().toString().padStart(2, '0')}` : 
+                        '현재 시간';
+                    playKillSound();
+                    showNotification(`${matchedBoss.name}을(를) ${timeText} 기준으로 처치했습니다! ${formatTime(matchedBoss.respawnTime * 60000)} 후 리젠됩니다.`);
+                })
+                .catch((error) => {
+                    console.error('보스 처치 업데이트 실패:', error);
+                    showNotification('업데이트에 실패했습니다.');
+                });
             
             // 입력 필드 초기화
             input.value = '';
