@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머 Ver1.3</title>
+    <title>게임 보스 리젠 타이머 Ver1.4</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -769,7 +769,7 @@
                 <!-- 로그인 상태 표시 영역 -->
             </div>
 
-            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.3</h1>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.4</h1>
             <p>보스 몬스터의 리젠 시간을 추적하고 관리하세요</p>
         </div>
 
@@ -1008,6 +1008,8 @@
         let audioContext = null;
         let soundEnabled = localStorage.getItem('soundEnabled') !== 'false'; // 기본값 true
         let bossFilter = 'all';
+
+        let previousButtonStates = {};
 
         const ADMIN_EMAIL = 'dogfightda@gmail.com';
         const ADMIN_PASSWORD = '0716';
@@ -1431,6 +1433,20 @@
                 return a.name.localeCompare(b.name, 'ko');
             });
             
+            // 상태 변화 감지 및 사운드 안내
+            bosses.forEach(boss => {
+                const prev = previousButtonStates[boss.id];
+                if (prev) {
+                    if (prev.status === 'dead' && boss.status === 'alive') {
+                        if (soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
+                    }
+                    if (prev.status === 'alive' && boss.status === 'dead') {
+                        if (soundEnabled) speak(`${boss.name} 보스를 처치했습니다.`);
+                    }
+                }
+                previousButtonStates[boss.id] = { status: boss.status };
+            });
+
             container.innerHTML = `
                 <div class="boss-grid">
                     ${sortedBosses.map(boss => createBossCard(boss)).join('')}
@@ -1707,6 +1723,9 @@
 
         // 보스 수동 리젠
         function reviveBoss(id) {
+            if (!confirm('정말로 이 보스를 리젠 처리하시겠습니까?')) {
+                return;
+            }
             const boss = bosses.find(b => b.id === id);
             if (!boss) return;
             
@@ -1773,7 +1792,7 @@
             // 자동 처리는 10초마다 체크 (Firebase 부하 대폭 감소)
             setInterval(() => {
                 checkAutoProcessing();
-            }, 10000);
+            }, 1000);
         }
 
         // 자동 처리 체크 (5분마다만 실행)
