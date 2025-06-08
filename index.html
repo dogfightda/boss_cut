@@ -1020,12 +1020,24 @@
             bossTimersRef = db.ref('bossTimers');
             
             // Firebase 데이터 로드 및 실시간 업데이트 설정
+            let previousBossStates = {};
             bossTimersRef.on('value', (snapshot) => {
-                bosses = Object.keys(snapshot.val() || {}).map(key => ({
+                const data = snapshot.val() || {};
+                const newBosses = Object.keys(data).map(key => ({
                     id: parseInt(key),
-                    ...snapshot.val()[key]
+                    ...data[key]
                 }));
-                console.log('Firebase에서 보스 데이터 로드됨:', bosses.length, '개');
+
+                // dead → alive로 바뀐 보스만 TTS 실행
+                newBosses.forEach(boss => {
+                    const prev = previousBossStates[boss.id];
+                    if (prev && prev.status === 'dead' && boss.status === 'alive') {
+                        if (soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
+                    }
+                    previousBossStates[boss.id] = { status: boss.status };
+                });
+
+                bosses = newBosses;
                 renderBosses();
             }, (error) => {
                 console.error('Firebase 데이터 로드 실패:', error);
@@ -1897,18 +1909,7 @@
                 bossTimersRef.update(updates)
                     .then(() => {
                         console.log('자동 처리 업데이트 완료');
-                        if (hasRespawns) {
-                            // 리젠된 보스들에 대해 TTS 실행
-                            Object.keys(updates).forEach(key => {
-                                if (key.endsWith('/status') && updates[key] === 'alive') {
-                                    const bossId = key.split('/')[0];
-                                    const boss = bosses.find(b => b.id.toString() === bossId);
-                                    if (boss) {
-                                        speak(`${boss.name} 보스가 리젠되었습니다.`);
-                                    }
-                                }
-                            });
-                        }
+                        // TTS 호출 제거 (Firebase 리스너에서만 실행)
                     })
                     .catch((error) => {
                         console.error('자동 처리 업데이트 실패:', error);
@@ -2558,18 +2559,6 @@
 
         // 자동 업데이트 처리
         function processAutoUpdates(updates, hasRespawns) {
-            // 리젠된 보스들에 대해 TTS를 최우선으로 실행
-            if (hasRespawns) {
-                Object.keys(updates).forEach(key => {
-                    if (key.endsWith('/status') && updates[key] === 'alive') {
-                        const bossId = key.split('/')[0];
-                        const boss = bosses.find(b => b.id.toString() === bossId);
-                        if (boss) {
-                            speak(`${boss.name} 보스가 리젠되었습니다.`);
-                        }
-                    }
-                });
-            }
             bossTimersRef.update(updates)
                 .then(() => {
                     console.log('자동 처리 업데이트 완료');
@@ -2711,9 +2700,7 @@
                 updates[`${boss.id}/killTime`] = null;
                 updates[`${boss.id}/status`] = 'alive';
             }
-            // 사운드 안내를 최우선으로 실행
-            const message = isKill ? `${boss.name} 보스가 처치되었습니다.` : `${boss.name} 보스가 리젠되었습니다.`;
-            speak(message);
+            // TTS 호출 제거 (Firebase 리스너에서만 실행)
             bossTimersRef.update(updates)
                 .then(() => {
                     console.log(isKill ? '처치 시간 업데이트 완료' : '리젠 처리 완료');
