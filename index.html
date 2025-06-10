@@ -17,7 +17,7 @@
             try {
                 // 앱(WebView)에서 실행 중이면 네이티브 함수 호출
                 if (window.android && typeof window.android.speak === 'function') {
-                    window.android.speak(text);
+                    // window.android.speak(text); // 네이티브 호출 주석처리
                     return;
                 }
                 // 일반 브라우저에서는 기존 방식 사용
