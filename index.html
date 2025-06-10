@@ -1452,14 +1452,7 @@
             // 상태 변화 감지 및 사운드 안내
             bosses.forEach(boss => {
                 const prev = previousButtonStates[boss.id];
-                if (prev) {
-                    if (prev.status === 'dead' && boss.status === 'alive') {
-                        if (soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
-                    }
-                    if (prev.status === 'alive' && boss.status === 'dead') {
-                        if (soundEnabled) speak(`${boss.name} 보스를 처치했습니다.`);
-                    }
-                }
+                // TTS 호출 제거 (중복 방지)
                 previousButtonStates[boss.id] = { status: boss.status };
             });
 
