@@ -1018,6 +1018,7 @@
         let bossFilter = 'all';
 
         let previousButtonStates = {};
+        let isBossDataLoaded = false;
 
         const ADMIN_EMAIL = 'dogfightda@gmail.com';
         const ADMIN_PASSWORD = '0716';
@@ -1042,12 +1043,13 @@
                 newBosses.forEach(boss => {
                     const prev = previousBossStates[boss.id];
                     if (prev && prev.status === 'dead' && boss.status === 'alive') {
-                        if (soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
+                        if (soundEnabled && isBossDataLoaded) speak(`${boss.name} 보스가 리젠되었습니다.`);
                     }
                     previousBossStates[boss.id] = { status: boss.status };
                 });
 
                 bosses = newBosses;
+                isBossDataLoaded = true;
                 renderBosses();
             }, (error) => {
                 console.error('Firebase 데이터 로드 실패:', error);
@@ -1334,12 +1336,14 @@
 
         // 보스 렌더링 (Firebase 리스너 전용)
         function renderBosses() {
+            if (!isBossDataLoaded) return;
             renderBossesUI();
             updateStats();
         }
             
         // 보스 목록 렌더링 (Firebase 리스너 전용)
         function renderBossesUI() {
+            if (!isBossDataLoaded) return;
             const container = document.getElementById('bossContainer');
             const quickKillSection = document.getElementById('quickKillSection');
             if (bosses.length === 0) {
