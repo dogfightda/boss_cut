@@ -1086,7 +1086,10 @@
                 
                 // 테스트 음성 재생
                 setTimeout(() => {
-                    speak('보스 타이머가 준비되었습니다.');
+                    // 앱(WebView)에서는 네이티브에서 이미 안내하므로, 웹에서만 안내
+                    if (!(window.android && typeof window.android.speak === 'function')) {
+                        speak('보스 타이머가 준비되었습니다.');
+                    }
                 }, 1000);
             } catch (error) {
                 console.error('초기화 중 에러 발생:', error);
