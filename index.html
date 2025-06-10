@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머 Ver1.4</title>
+    <title>게임 보스 리젠 타이머 Ver1.5</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -17,19 +17,19 @@
                     return;
                 }
                 // 일반 브라우저에서는 기존 방식 사용
-                if ('speechSynthesis' in window) {
+                    if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'ko-KR';
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'ko-KR';
                     utterance.rate = 1.0;
                     utterance.pitch = 1.0;
                     utterance.volume = 1.0;
-                    window.speechSynthesis.speak(utterance);
+                        window.speechSynthesis.speak(utterance);
                 } else {
                     const audio = new Audio();
                     audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ko&client=tw-ob`;
                     audio.play();
-                }
+                    }
             } catch (error) {
                 console.error('음성 재생 중 오류 발생:', error);
             }
@@ -759,7 +759,7 @@
                 <!-- 로그인 상태 표시 영역 -->
             </div>
 
-            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.4</h1>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.5</h1>
             <p style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 보스 몬스터의 리젠 시간을 추적하고 관리하세요
                 <button id="helpIcon" title="설명서 보기" style="background: #f4f6fa; border: 1px solid #bfc4c9; border-radius: 16px; font-size: 0.78rem; color: #2563eb; font-weight: 600; padding: 2px 14px 2px 8px; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: background 0.2s, color 0.2s; height: 28px; line-height: 1.1;">
@@ -2518,31 +2518,6 @@
             if (isNaN(value) || value < min || value > max) {
                 value = Math.min(Math.max(min, value || 0), max);
                 input.value = value;
-            }
-        }
-
-        // TTS 실행 함수
-        function speak(text) {
-            try {
-                if ('speechSynthesis' in window) {
-                    // 이전 음성이 재생 중이면 중지
-                    window.speechSynthesis.cancel();
-
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'ko-KR';
-                    utterance.rate = 1.0;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-
-                    console.log('음성 재생 시작:', text);
-                    window.speechSynthesis.speak(utterance);
-                } else {
-                    console.error('이 브라우저는 음성 합성을 지원하지 않습니다.');
-                    showNotification('🔇 음성 안내를 지원하지 않는 브라우저입니다.');
-                }
-            } catch (error) {
-                console.error('음성 재생 중 오류 발생:', error);
-                showNotification('🔇 음성 안내 중 오류가 발생했습니다.');
             }
         }
 
