@@ -1086,8 +1086,9 @@
                 
                 // 테스트 음성 재생
                 setTimeout(() => {
-                    // 앱(WebView)에서는 네이티브에서 이미 안내하므로, 웹에서만 안내
-                    if (!(window.android && typeof window.android.speak === 'function')) {
+                    // 안드로이드 WebView 환경인지 userAgent로도 한 번 더 체크
+                    const isAndroidWebView = /wv/.test(navigator.userAgent) || (window.android && typeof window.android.speak === 'function');
+                    if (!isAndroidWebView) {
                         speak('보스 타이머가 준비되었습니다.');
                     }
                 }, 1000);
@@ -2730,4 +2731,3 @@
     </script>
 </body>
 </html> 
-
