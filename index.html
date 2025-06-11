@@ -2336,7 +2336,7 @@
                 
                 // 입력 필드 초기화
                 input.value = '';
-                input.blur();
+                input.focus(); // blur() -> focus()로 변경
                 return;
             }
             
@@ -2368,7 +2368,7 @@
             
             // 입력 필드 초기화
             input.value = '';
-            input.blur();
+            input.focus(); // blur() -> focus()로 변경
         }
 
         // 통계 업데이트
