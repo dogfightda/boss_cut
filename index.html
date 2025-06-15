@@ -1468,9 +1468,8 @@
             const now = new Date();
             let statusClass = 'alive';
             let statusText = '생존';
-            let timerDisplay = '대기 중';
+            let timerDisplay = '';
             let isUnregistered = false;
-            
             // 리젠 시간을 시간:분 형태로 표시
             let timeDisplay = '';
             if (boss.fixed) {
@@ -1482,164 +1481,59 @@
                 const respawnMins = boss.respawnTime % 60;
                 timeDisplay = `<span>⏱️ ${respawnHours > 0 ? `${respawnHours}시간 ${respawnMins}분` : `${respawnMins}분`}</span>`;
             }
-            
             // 카드 하단에 항상 마지막 컷 시간 표기 (24시간제, NaN 방지)
             let lastKilledDisplay = '';
-            if (boss.fixed) {
-                // 고정보스는 가장 최근의 리젠 시각(요일/시/분) 표기
-                const now = new Date();
-                const nowDay = now.getDay();
-                const nowHour = now.getHours();
-                const nowMinute = now.getMinutes();
-                
-                // 다음 리젠 요일/시/분 (항상 미래)
-                let minNextDiff = 7 * 24 * 60;
-                let nextDay = nowDay;
-                boss.fixedDays.forEach(day => {
-                    let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
-                    if (diff <= 0) diff += 7 * 24 * 60;
-                    if (diff < minNextDiff) {
-                        minNextDiff = diff;
-                        nextDay = day;
-                    }
-                });
-                
-                // 가장 최근 리젠 시각 계산
-                let minDiff = 7 * 24 * 60;
-                let lastDay = nowDay;
-                boss.fixedDays.forEach(day => {
-                    let diff = (nowDay - day) * 24 * 60 + (nowHour - boss.fixedHour) * 60 + (nowMinute - boss.fixedMinute);
-                    if (diff < 0) diff += 7 * 24 * 60;
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        lastDay = day;
-                    }
-                });
-                
-                const lastRegen = new Date(now);
-                lastRegen.setDate(now.getDate() - ((nowDay - lastDay + 7) % 7));
-                lastRegen.setHours(boss.fixedHour);
-                lastRegen.setMinutes(boss.fixedMinute);
-                lastRegen.setSeconds(0);
-
-                const nextRegen = new Date(now);
-                nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
-                nextRegen.setHours(boss.fixedHour);
-                nextRegen.setMinutes(boss.fixedMinute);
-                nextRegen.setSeconds(0);
-                
-                if (!isNaN(lastRegen.getTime())) {
-                    const hour = lastRegen.getHours().toString().padStart(2, '0');
-                    const min = lastRegen.getMinutes().toString().padStart(2, '0');
-                    const sec = lastRegen.getSeconds().toString().padStart(2, '0');
-                    
-                    const nextHour = nextRegen.getHours().toString().padStart(2, '0');
-                    const nextMin = nextRegen.getMinutes().toString().padStart(2, '0');
-                    const nextSec = nextRegen.getSeconds().toString().padStart(2, '0');
-                    
-                    lastKilledDisplay = `<span>🗡️ 마지막 컷: ${hour}:${min}:${sec}</span><span style="margin-left: 10px;">⏰ 다음 리젠: ${nextHour}:${nextMin}:${nextSec}</span>`;
-                }
-            } else if (boss.lastKilled) {
+            if (boss.lastKilled) {
                 const killedTime = new Date(boss.lastKilled);
                 if (!isNaN(killedTime.getTime())) {
                     const hour = killedTime.getHours().toString().padStart(2, '0');
                     const min = killedTime.getMinutes().toString().padStart(2, '0');
                     const sec = killedTime.getSeconds().toString().padStart(2, '0');
-                    
                     // 리젠 예상 시간 계산
-                    const expectedRespawnTime = new Date(killedTime.getTime() + boss.respawnTime * 60000);
-                    const respawnHour = expectedRespawnTime.getHours().toString().padStart(2, '0');
-                    const respawnMin = expectedRespawnTime.getMinutes().toString().padStart(2, '0');
-                    const respawnSec = expectedRespawnTime.getSeconds().toString().padStart(2, '0');
-                    
-                    lastKilledDisplay = `<span>🗡️ 마지막 컷: ${hour}:${min}:${sec}</span><span style="margin-left: 10px;">⏰ 다음 리젠: ${respawnHour}:${respawnMin}:${respawnSec}</span>`;
+                    let respawnText = '';
+                    if (boss.nextRespawn) {
+                        const expectedRespawnTime = new Date(boss.nextRespawn);
+                        if (!isNaN(expectedRespawnTime.getTime())) {
+                            const respawnHour = expectedRespawnTime.getHours().toString().padStart(2, '0');
+                            const respawnMin = expectedRespawnTime.getMinutes().toString().padStart(2, '0');
+                            const respawnSec = expectedRespawnTime.getSeconds().toString().padStart(2, '0');
+                            respawnText = `<span style="margin-left: 10px;">⏰ 다음 리젠: ${respawnHour}:${respawnMin}:${respawnSec}</span>`;
+                        }
+                    }
+                    lastKilledDisplay = `<span>🗡️ 마지막 컷: ${hour}:${min}:${sec}</span>${respawnText}`;
                 }
             }
-
-            // 고정보스: 다음 리젠까지 남은 시간 계산 및 상태 표시
-            if (boss.fixed) {
-                // 고정보스 남은 시간 계산 개선
-                const nowDay = now.getDay();
-                const nowHour = now.getHours();
-                const nowMinute = now.getMinutes();
-                
-                // 다음 리젠 요일/시/분 (항상 미래)
-                let minNextDiff = 7 * 24 * 60;
-                let nextDay = nowDay;
-                boss.fixedDays.forEach(day => {
-                    let diff = (day - nowDay) * 24 * 60 + (boss.fixedHour - nowHour) * 60 + (boss.fixedMinute - nowMinute);
-                    if (diff <= 0) diff += 7 * 24 * 60;
-                    if (diff < minNextDiff) {
-                        minNextDiff = diff;
-                        nextDay = day;
-                    }
-                });
-                const nextRegen = new Date(now);
-                nextRegen.setDate(now.getDate() + ((nextDay - nowDay + 7) % 7));
-                nextRegen.setHours(boss.fixedHour);
-                nextRegen.setMinutes(boss.fixedMinute);
-                nextRegen.setSeconds(0);
-
-                // 상태 판단 로직 개선
-                if (boss.status === 'dead') {
-                    let diff = nextRegen - now;
-                    if (diff < 0) diff += 7 * 24 * 60 * 60 * 1000;
-                    if (diff <= 600000) {
-                        statusClass = 'respawn-soon';
-                        statusText = '곧 리젠';
-                    } else if (diff <= 0) {
-                    statusClass = 'alive';
-                    statusText = '생존';
-                        timerDisplay = '대기 중';
-                } else {
-                        statusClass = 'dead';
-                        statusText = '사망';
-                    }
-                    timerDisplay = diff > 0 ? formatTime(diff) : '대기 중';
-                } else if (boss.status === 'alive') {
-                    // alive 상태일 때는 상태를 변경하지 않고 대기 중만 표시
-                    statusClass = 'alive';
-                    statusText = '생존';
-                    timerDisplay = '대기 중';
-                }
-            } else if (boss.status === 'alive') {
-                isUnregistered = boss.unregistered || false;
-                // lastKilled이 있다면 리젠 시간까지 계산해서 표시
-                if (boss.lastKilled) {
-                    const killedTime = new Date(boss.lastKilled);
-                    const expectedRespawnTime = new Date(killedTime.getTime() + boss.respawnTime * 60000);
-                    const timeDiff = expectedRespawnTime - now;
-                    if (timeDiff > 0) {
-                        // 리젠까지 남은 시간 (미등록이면 미등록 붙임)
-                        statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead';
-                    statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
-                        timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
-                    } else {
-                        // 리젠 완료 후 대기중
-                        statusClass = 'alive';
-                        statusText = '생존';
-                        timerDisplay = '대기 중';
-                    }
-                } else {
-                    // 컷 기록이 없는 경우 - 진짜 대기중
-                    statusText = '생존';
-                    timerDisplay = '대기 중';
-                }
+            // 상태/타이머 텍스트 결정
+            if (boss.status === 'alive') {
+                statusClass = 'alive';
+                statusText = '생존';
+                timerDisplay = '대기 중'; // 오직 생존(초록)에서만
             } else if (boss.status === 'dead' && boss.nextRespawn) {
                 const respawnTime = new Date(boss.nextRespawn);
                 const timeDiff = respawnTime - now;
                 isUnregistered = boss.unregistered || false;
                 if (timeDiff > 0) {
-                    statusClass = timeDiff <= 600000 ? 'respawn-soon' : 'dead';
-                    statusText = timeDiff <= 600000 ? '곧 리젠' : '사망';
-                    timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
+                    if (timeDiff <= 600000) {
+                        statusClass = 'respawn-soon';
+                        statusText = '곧 리젠';
+                        timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
+                    } else {
+                        statusClass = 'dead';
+                        statusText = '사망';
+                        timerDisplay = formatTime(timeDiff) + (isUnregistered ? ' 미등록' : '');
+                    }
                 } else {
+                    // 리젠 시간이 지났으면 생존으로 전환
                     statusClass = 'alive';
                     statusText = '생존';
                     timerDisplay = '대기 중';
                 }
+            } else {
+                // 기타 예외(혹시 모를 데이터 꼬임)
+                statusClass = boss.status === 'dead' ? 'dead' : 'alive';
+                statusText = boss.status === 'dead' ? '사망' : '생존';
+                timerDisplay = boss.status === 'dead' ? '-' : '대기 중';
             }
-
             return `
                 <div class="boss-card ${statusClass}">
                     <div class="boss-left">
@@ -1659,14 +1553,12 @@
                         <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''} ${isUnregistered ? 'unregistered' : ''}" id="timer-${boss.id}">
                             ${timerDisplay}
                         </div>
-                    <div class="boss-actions">
                         ${(boss.fixed && statusClass === 'dead') || boss.status === 'dead' ? 
                             `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>` :
                             `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>`
                         }
                         <button class="btn btn-small admin-only" onclick="showEditModal(${boss.id})" style="background: #6c757d;">수정</button>
                         <button class="btn btn-small delete-btn" onclick="deleteBoss(${boss.id})">삭제</button>
-                    </div>
                     </div>
                 </div>
             `;
@@ -1737,19 +1629,17 @@
             }
             const boss = bosses.find(b => b.id === id);
             if (!boss) return;
-            
+            // lastKilled, nextRespawn을 초기화하지 않고 유지
             const updatedBoss = {
                 ...boss,
                 status: 'alive',
-                // 미등록 보스는 lastKilled 유지, 정상 보스는 lastKilled 초기화
-                lastKilled: boss.unregistered ? boss.lastKilled : null,
-                nextRespawn: null
+                // lastKilled, nextRespawn 유지
+                unregistered: false,
+                autoProcessed: false
             };
-            
             bossTimersRef.child(id.toString()).update(updatedBoss)
                 .then(() => {
                     speak(`${boss.name} 보스가 리젠되었습니다!`); // TTS 사용
-                    const statusText = boss.unregistered ? '(미등록 상태 유지)' : '';
                     showNotification(`${boss.name} 보스가 리젠되었습니다!`);
                 })
                 .catch((error) => {
@@ -1922,10 +1812,9 @@
                     const respawnTime = new Date(boss.nextRespawn);
                     if (respawnTime <= now) {
                         updates[`${boss.id}/status`] = 'alive';
-                        updates[`${boss.id}/nextRespawn`] = null;
+                        // lastKilled, nextRespawn 유지
                         updates[`${boss.id}/autoProcessed`] = false;
-                        updates[`${boss.id}/unregistered`] = false; // 추가!
-                        updates[`${boss.id}/lastKilled`] = null;    // 추가!
+                        updates[`${boss.id}/unregistered`] = false;
                         hasUpdates = true;
                     }
                 }
