@@ -1285,8 +1285,8 @@
             const minutes = parseInt(document.getElementById('respawnMinutes').value) || 0;
             const totalMinutes = hours * 60 + minutes;
             
-            if (totalMinutes <= 0) {
-                showNotification('리젠 시간을 입력해주세요.');
+            if (totalMinutes < 10) {
+                showNotification('리젠 시간은 최소 10분 이상으로 입력해주세요.');
                 return;
             }
             
@@ -1960,8 +1960,8 @@
                 const minutes = parseInt(document.getElementById('editRespawnMinutes').value) || 0;
                 const totalMinutes = hours * 60 + minutes;
                 
-                if (totalMinutes <= 0) {
-                    showNotification('리젠 시간을 입력해주세요.');
+                if (totalMinutes < 10) {
+                    showNotification('리젠 시간은 최소 10분 이상으로 입력해주세요.');
                     return;
                 }
                 
