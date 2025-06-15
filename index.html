@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게임 보스 리젠 타이머 Ver1.5</title>
+    <title>게임 보스 리젠 타이머 Ver1.6</title>
     <!-- Firebase SDK 추가 -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -763,7 +763,7 @@
                 <!-- 로그인 상태 표시 영역 -->
             </div>
 
-            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.5</h1>
+            <h1>⚔️ 게임 보스 리젠 타이머 Ver1.6</h1>
             <p style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 보스 몬스터의 리젠 시간을 추적하고 관리하세요
                 <button id="helpIcon" title="설명서 보기" style="background: #f4f6fa; border: 1px solid #bfc4c9; border-radius: 16px; font-size: 0.78rem; color: #2563eb; font-weight: 600; padding: 2px 14px 2px 8px; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: background 0.2s, color 0.2s; height: 28px; line-height: 1.1;">
@@ -2132,6 +2132,33 @@
                     .then(() => {
                         playRespawnSound(); // 전체 리젠 사운드 재생
                         showNotification(`${deadBosses.length}마리의 보스가 모두 리젠되었습니다!`);
+                    })
+                    .catch((error) => {
+                        console.error('전체 리젠 실패:', error);
+                        showNotification('전체 리젠에 실패했습니다.');
+                    });
+            }
+
+            // 고정보스를 제외한 모든 일반보스의 상태 및 기록을 초기화
+            const normalBosses = bosses.filter(boss => boss.fixed !== true);
+            if (normalBosses.length === 0) {
+                showNotification('리젠할 보스가 없습니다.');
+                return;
+            }
+            if (confirm(`${normalBosses.length}마리의 일반 보스를 모두 리젠(초기화)하시겠습니까?\n\n⚠️ 서버 점검 후 사용 - 모든 컷 시간이 초기화됩니다!`)) {
+                // Firebase 배치 업데이트를 위한 객체 준비 (모든 일반보스 컷 시간 초기화)
+                const updates = {};
+                normalBosses.forEach(boss => {
+                    updates[`${boss.id}/status`] = 'alive';
+                    updates[`${boss.id}/lastKilled`] = null;
+                    updates[`${boss.id}/nextRespawn`] = null;
+                    updates[`${boss.id}/unregistered`] = false;
+                    updates[`${boss.id}/autoProcessed`] = false;
+                });
+                bossTimersRef.update(updates)
+                    .then(() => {
+                        playRespawnSound(); // 전체 리젠 사운드 재생
+                        showNotification(`${normalBosses.length}마리의 일반 보스가 모두 리젠(초기화)되었습니다!`);
                     })
                     .catch((error) => {
                         console.error('전체 리젠 실패:', error);
