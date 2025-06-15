@@ -2647,6 +2647,20 @@
             const modal = document.getElementById('helpModal');
             if (e.target === modal) modal.style.display = 'none';
         });
+
+        // 효과음 재생 함수 (전체 리젠 등)
+        function playRespawnSound() {
+            if (!soundEnabled) return;
+            try {
+                // 효과음 mp3 (무료 효과음 예시)
+                const audio = new Audio('https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae5c3.mp3');
+                audio.volume = 0.7;
+                audio.play();
+            } catch (e) {
+                // 효과음 재생 실패 시 TTS로 대체
+                speak('전체 보스가 리젠되었습니다.');
+            }
+        }
     </script>
 </body>
 </html> 
