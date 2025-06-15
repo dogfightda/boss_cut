@@ -1707,7 +1707,7 @@
             const now = new Date();
             const updates = {};
             let hasUpdates = false;
-            const respawnedBossIds = [];
+            // dead→alive id 수집은 더 이상 사용하지 않음
             
             bosses.forEach(boss => {
                 // [고정보스 자동 리젠]
@@ -1825,7 +1825,7 @@
                         updates[`${boss.id}/autoProcessed`] = false;
                         updates[`${boss.id}/unregistered`] = false;
                         hasUpdates = true;
-                        respawnedBossIds.push(boss.id.toString()); // dead→alive로 바뀌는 id 저장
+                        // dead→alive id 수집 제거
                     }
                 }
             });
@@ -1834,11 +1834,7 @@
             if (hasUpdates && bossTimersRef) {
                 bossTimersRef.update(updates)
                     .then(() => {
-                        // dead→alive로 바뀐 보스에 대해 직접 TTS 호출
-                        respawnedBossIds.forEach(id => {
-                            const boss = bosses.find(b => b.id.toString() === id);
-                            if (boss && soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
-                        });
+                        // TTS 직접 호출 제거, 리스너에서만 실행
                         console.log('자동 처리 업데이트 완료');
                     })
                     .catch((error) => {
