@@ -1534,6 +1534,20 @@
                 statusText = boss.status === 'dead' ? '사망' : '생존';
                 timerDisplay = boss.status === 'dead' ? '-' : '대기 중';
             }
+            // 버튼 렌더링 조건 근본적 수정
+            let actionButton = '';
+            if (boss.status === 'dead' && boss.nextRespawn && new Date(boss.nextRespawn) > now && boss.unregistered) {
+                // 미등록 자동처리 상태(주황색 미등록)
+                actionButton = `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>`;
+            } else if (boss.status === 'dead' && boss.nextRespawn && new Date(boss.nextRespawn) <= now) {
+                // dead + 리젠 가능
+                actionButton = `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>`;
+            } else if (boss.status === 'dead') {
+                // dead + 일반 사망(미등록 아님)
+                actionButton = `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>`;
+            } else if (boss.status === 'alive') {
+                actionButton = `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>`;
+            }
             return `
                 <div class="boss-card ${statusClass}">
                     <div class="boss-left">
@@ -1541,7 +1555,7 @@
                             ${statusText}
                         </div>
                         <div class="boss-name">${boss.name}
-                            ${boss.fixed ? '<span style=\"background:#3b4cca;color:#fff;font-size:0.7em;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;\">고정</span>' : ''}
+                            ${boss.fixed ? '<span style="background:#3b4cca;color:#fff;font-size:0.7em;padding:2px 7px;border-radius:8px;margin-left:6px;vertical-align:middle;">고정</span>' : ''}
                         </div>
                             <div class="boss-details">
                                 <span>📍 ${boss.location}</span>
@@ -1553,10 +1567,7 @@
                         <div class="timer-display ${statusClass === 'respawn-soon' ? 'respawn-soon' : ''} ${isUnregistered ? 'unregistered' : ''}" id="timer-${boss.id}">
                             ${timerDisplay}
                         </div>
-                        ${(boss.fixed && statusClass === 'dead') || boss.status === 'dead' ? 
-                            `<button class="btn btn-small" onclick="reviveBoss(${boss.id})">리젠</button>` :
-                            `<button class="btn btn-kill btn-small" onclick="killBoss(${boss.id})">처치</button>`
-                        }
+                        ${actionButton}
                         <button class="btn btn-small admin-only" onclick="showEditModal(${boss.id})" style="background: #6c757d;">수정</button>
                         <button class="btn btn-small delete-btn" onclick="deleteBoss(${boss.id})">삭제</button>
                     </div>
