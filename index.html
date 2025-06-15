@@ -1911,8 +1911,8 @@
                     if (expectedRespawnTime <= now) {
                         // 리젠 시간이 지났으므로 미등록 상태 해제
                         console.log(`${boss.name}: 리젠 시간 완료, 미등록 상태 해제`);
-                        // 미등록 상태는 유지하되 autoProcessed만 리셋
                         updates[`${boss.id}/autoProcessed`] = false;
+                        updates[`${boss.id}/unregistered`] = false; // 추가!
                         hasUpdates = true;
                     }
                 }
@@ -1924,6 +1924,8 @@
                         updates[`${boss.id}/status`] = 'alive';
                         updates[`${boss.id}/nextRespawn`] = null;
                         updates[`${boss.id}/autoProcessed`] = false;
+                        updates[`${boss.id}/unregistered`] = false; // 추가!
+                        updates[`${boss.id}/lastKilled`] = null;    // 추가!
                         hasUpdates = true;
                     }
                 }
