@@ -10,30 +10,47 @@
     <script>
         // 음성 재생 함수
         let lastTTS = { text: '', time: 0 };
+        function playCoolEffect() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(600, ctx.currentTime);
+            o.frequency.linearRampToValueAtTime(1200, ctx.currentTime + 0.25);
+            g.gain.setValueAtTime(0.2, ctx.currentTime);
+            g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+            o.connect(g).connect(ctx.destination);
+            o.start();
+            o.stop(ctx.currentTime + 0.3);
+            o.onended = () => ctx.close();
+        }
         function speak(text) {
             const now = Date.now();
             if (lastTTS.text === text && now - lastTTS.time < 2000) return; // 2초 이내 중복 방지
             lastTTS = { text, time: now };
             try {
-                // 앱(WebView)에서 실행 중이면 네이티브 함수 호출
-                if (window.android && typeof window.android.speak === 'function') {
-                    // window.android.speak(text); // 네이티브 호출 주석처리
-                    return;
-                }
-                // 일반 브라우저에서는 기존 방식 사용
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = 'ko-KR';
-                    utterance.rate = 1.0;
-                    utterance.pitch = 1.0;
-                    utterance.volume = 1.0;
-                    window.speechSynthesis.speak(utterance);
-                } else {
-                    const audio = new Audio();
-                    audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ko&client=tw-ob`;
-                    audio.play();
-                }
+                playCoolEffect(); // TTS 전에 효과음 재생
+                setTimeout(() => {
+                    // 앱(WebView)에서 실행 중이면 네이티브 함수 호출
+                    if (window.android && typeof window.android.speak === 'function') {
+                        // window.android.speak(text); // 네이티브 호출 주석처리
+                        return;
+                    }
+                    // 일반 브라우저에서는 기존 방식 사용
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        utterance.lang = 'ko-KR';
+                        utterance.rate = 1.0;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 1.0;
+                        window.speechSynthesis.speak(utterance);
+                    } else {
+                        const audio = new Audio();
+                        audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=ko&client=tw-ob`;
+                        audio.play();
+                    }
+                }, 350); // 효과음이 끝난 뒤 TTS 실행
             } catch (error) {
                 console.error('음성 재생 중 오류 발생:', error);
             }
