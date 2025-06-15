@@ -1707,6 +1707,7 @@
             const now = new Date();
             const updates = {};
             let hasUpdates = false;
+            const respawnedBossIds = [];
             
             bosses.forEach(boss => {
                 // [고정보스 자동 리젠]
@@ -1824,19 +1825,21 @@
                         updates[`${boss.id}/autoProcessed`] = false;
                         updates[`${boss.id}/unregistered`] = false;
                         hasUpdates = true;
+                        respawnedBossIds.push(boss.id.toString()); // dead→alive로 바뀌는 id 저장
                     }
                 }
             });
             
             // 업데이트가 있을 때만 Firebase 호출
             if (hasUpdates && bossTimersRef) {
-                // 리젠된 보스가 있는지 확인
-                const hasRespawns = Object.keys(updates).some(key => key.endsWith('/status') && updates[key] === 'alive');
-                
                 bossTimersRef.update(updates)
                     .then(() => {
+                        // dead→alive로 바뀐 보스에 대해 직접 TTS 호출
+                        respawnedBossIds.forEach(id => {
+                            const boss = bosses.find(b => b.id.toString() === id);
+                            if (boss && soundEnabled) speak(`${boss.name} 보스가 리젠되었습니다.`);
+                        });
                         console.log('자동 처리 업데이트 완료');
-                        // TTS 호출 제거 (Firebase 리스너에서만 실행)
                     })
                     .catch((error) => {
                         console.error('자동 처리 업데이트 실패:', error);
